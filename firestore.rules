@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Calq: each user can read and write only their own history.
+// Data: users/{uid}/history/{calcId} = { expr, result, angle, pinned, createdAt, updatedAt }
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validItem(d) {
+      return d.keys().hasOnly(['expr', 'result', 'angle', 'pinned', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['expr', 'result', 'angle', 'pinned', 'createdAt', 'updatedAt'])
+        && d.expr is string && d.expr.size() > 0 && d.expr.size() <= 200
+        && d.result is string && d.result.size() > 0 && d.result.size() <= 200
+        && d.angle in ['deg', 'rad']
+        && d.pinned is bool
+        && d.createdAt is int
+        && d.updatedAt is int;
+    }
+
+    match /users/{uid}/history/{calcId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && calcId.size() <= 64 && validItem(request.resource.data);
+      allow update: if isOwner(uid)
+        && validItem(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Everything else is denied.
+  }
+}

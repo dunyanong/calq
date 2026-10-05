@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Calq",
+    "slug": "calq",
+    "version": "1.0.0",
+    "scheme": "calq",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.calqdip.calq",
+      "googleServicesFile": "./GoogleService-Info.plist"
+    },
+    "android": {
+      "package": "com.calqdip.calq",
+      "adaptiveIcon": {
+        "backgroundColor": "#a8cfe0",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#a8cfe0"
+        }
+      ],
+      "@react-native-google-signin/google-signin",
+      "expo-sharing"
+    ]
+  }
+}
