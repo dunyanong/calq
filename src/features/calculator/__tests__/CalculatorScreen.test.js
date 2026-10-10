@@ -63,6 +63,7 @@ test('holding a calculation shows workings, and Pin adds the pinned pill', async
   fireEvent(screen.getByText('= 14').parent, 'longPress');
   expect(screen.getByText('STEP 2 — GROUPED TERMS RESOLVED')).toBeTruthy();
   expect(screen.getByText('7×2')).toBeTruthy();
+  expect(screen.getByText('Sign in for detailed steps')).toBeTruthy(); // tests run as a guest
   const ones = screen.getAllByText('1').length; // the "1" key
   press('Pin');
   // the pinned pill appears showing "1"

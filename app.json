@@ -34,7 +34,15 @@
         }
       ],
       "@react-native-google-signin/google-signin",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Calq uses the camera to scan calculations you want to solve.",
+          "photosPermission": "Calq reads photos and screenshots you choose to scan calculations.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

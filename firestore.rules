@@ -28,6 +28,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
-    // Everything else is denied.
+    // Everything else is denied. usage/{uid} (AI daily quotas) is written only by
+    // Cloud Functions through the Admin SDK, which bypasses these rules.
   }
 }
