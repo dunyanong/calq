@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 
 const app = initializeApp({
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -16,3 +17,5 @@ const app = initializeApp({
 // Keeps the user signed in across app restarts.
 export const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
 export const db = getFirestore(app);
+// Cloud Functions in functions/ (default region us-central1).
+export const functions = getFunctions(app);

@@ -8,7 +8,9 @@ import CalcHeader from './components/CalcHeader';
 import DisplayPanel from './components/DisplayPanel';
 import Keypad from './components/Keypad';
 import HoldPanel from './components/HoldPanel';
+import ScanSheet from '@/features/scan/ScanSheet';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
 import { useHistory } from '@/features/history/HistoryContext';
 import { shareExport } from '@/features/history/exportHistory';
@@ -23,6 +25,7 @@ const DISPLAY_SHARE = 0.47; // display height / body height (330px of ~700 in th
 export default function Calculator() {
   const { theme: t, angle, output, update } = useSettings();
   const history = useHistory();
+  const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -34,6 +37,7 @@ export default function Calculator() {
   const [pinFilter, setPinFilter] = useState(false);
   // held calculation panel; session remounts the panel body on each open
   const [held, setHeld] = useState({ id: null, open: false, session: 0 });
+  const [scan, setScan] = useState({ open: false, session: 0 });
   const [kbHidden, setKbHidden] = useState(false);
   const [bodyH, setBodyH] = useState(0);
   const [displayH] = useState(() => new Animated.Value(0));
@@ -132,6 +136,15 @@ export default function Calculator() {
   const openHold = (id) => setHeld((h) => ({ id, open: true, session: h.session + 1 }));
   const closeHold = () => setHeld((h) => ({ ...h, open: false }));
 
+  const openScan = () => {
+    if (!user) {
+      toast('Sign in from Settings to scan');
+      return;
+    }
+    setScan((s) => ({ open: true, session: s.session + 1 }));
+  };
+  const closeScan = () => setScan((s) => ({ ...s, open: false }));
+
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
       <CalcHeader
@@ -156,12 +169,26 @@ export default function Calculator() {
           onKey={onKey}
           onToggleShift={() => setMode((m) => (m === 'shift' ? null : 'shift'))}
           onToggleAlpha={() => setMode((m) => (m === 'alpha' ? null : 'alpha'))}
-          onScan={() => toast('Scan an equation — coming soon')}
+          onScan={openScan}
           hidden={kbHidden}
           onHiddenChange={setKbHidden}
           bottomInset={insets.bottom}
         />
       </View>
+
+      <ScanSheet
+        visible={scan.open}
+        session={scan.session}
+        t={t}
+        angle={angle}
+        output={output}
+        onClose={closeScan}
+        onInsert={(expr) => {
+          setEntry(expr.slice(0, MAX_ENTRY)); // a scan is a whole calculation: replace the entry
+          setMode(null);
+          closeScan();
+        }}
+      />
 
       <HoldPanel
         item={heldItem}

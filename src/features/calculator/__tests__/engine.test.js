@@ -1,6 +1,5 @@
 import { evaluate, toMathjs, closeParens, freezeRandom } from '@/features/calculator/math/engine';
 import { formatNumber, asOperand } from '@/features/calculator/math/format';
-import { buildSteps } from '@/features/calculator/math/steps';
 
 const calc = (expr, angle = 'deg', output = 'dec') => formatNumber(evaluate(expr, angle), output);
 
@@ -120,21 +119,6 @@ describe('freezeRandom', () => {
       expect(n).toBeGreaterThanOrEqual(1);
       expect(n).toBeLessThanOrEqual(6);
     }
-  });
-});
-
-describe('buildSteps', () => {
-  test('matches the prototype example', () => {
-    const steps = buildSteps('sin(0.5)+√(16)×2', calc('sin(0.5)+√(16)×2', 'rad'), 'rad');
-    expect(steps[0].expr).toBe('sin(0.5)+√(16)×2');
-    expect(steps[1].expr).toBe('0.4794255386+4×2');
-    expect(steps[2].expr).toBe('0.4794255386+8');
-    expect(steps[steps.length - 1].expr).toBe('= 8.479425539');
-  });
-
-  test('grouped terms', () => {
-    const steps = buildSteps('(3+4)×12−5', '79');
-    expect(steps.map((s) => s.expr)).toEqual(['(3+4)×12−5', '7×12−5', '84−5', '= 79']);
   });
 });
 

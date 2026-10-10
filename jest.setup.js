@@ -11,7 +11,10 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   statusCodes: { SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED', IN_PROGRESS: 'IN_PROGRESS' },
 }));
 
-jest.mock('@/services/firebase', () => ({ auth: {}, db: {} }));
+jest.mock('@/services/firebase', () => ({ auth: {}, db: {}, functions: {} }));
+jest.mock('firebase/functions', () => ({ httpsCallable: jest.fn() }));
+jest.mock('expo-image-picker', () => ({}));
+jest.mock('expo-image-manipulator', () => ({}));
 
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {

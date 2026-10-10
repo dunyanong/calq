@@ -94,6 +94,38 @@ npx expo run:ios --device
 
 Google sign-in on the Android emulator needs a system image with Google Play (Device Manager shows the Play Store icon).
 
+## AI features (scan + steps)
+
+Signed-in users only. Both run through Cloud Functions in `functions/`, which call open-weights models (Qwen) on an OpenAI-compatible API. OpenRouter is the default.
+
+- **Scan** (camera key on the keypad): photo or screenshot → `scanEquation` (vision model) → expression in calculator notation → the user checks or edits it → inserted into the entry.
+- **Steps** (load when you hold a calculation with more than one operation, or big numbers like 489×73): `explainSteps` (text model) says which parts are worked out in each step, in what order, with a short note. It can also rewrite hard arithmetic into an easier equal form (489×73 → 489×70+489×3). The app computes every value with math.js (`math/aiSteps.js`) and checks that each step still equals the result. A plan that fails the check is never shown ("Couldn't explain this one" + Retry). Guests see "Sign in to see steps"; simple calculations like 5+3 show no steps.
+
+Setup (once per Firebase project):
+
+1. Firebase console → upgrade to the **Blaze** plan (Cloud Functions needs it; free tier covers small usage).
+2. Create an API key at your provider (e.g. openrouter.ai → Keys) and store it as a secret:
+   ```sh
+   npx firebase functions:secrets:set LLM_API_KEY
+   ```
+3. Install and deploy:
+   ```sh
+   cd functions && npm install && cd ..
+   npx firebase deploy --only functions
+   ```
+   The first deploy asks for the params below; press Enter to keep the defaults. They are saved in `functions/.env.<project-id>`.
+
+| Param | Default | |
+|---|---|---|
+| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | any OpenAI-compatible API: Together, Groq, DeepInfra, your own vLLM/Ollama |
+| `OCR_MODEL` | `qwen/qwen3-vl-235b-a22b-instruct` | must accept images |
+| `STEPS_MODEL` | `qwen/qwen3-235b-a22b-2507` | |
+| `SCANS_PER_DAY` / `STEPS_PER_DAY` | `30` / `200` | per user, counted in `usage/{uid}` |
+
+`expo-image-picker` is a native module, so run `npm run android` / `npm run ios` once after pulling this.
+
+Logs: `npx firebase functions:log`. Prompts are in `functions/prompts.js`.
+
 ## Check
 
 ```sh
@@ -119,8 +151,9 @@ src/
     calculator/
       CalculatorScreen.js
       components/           CalcHeader, DisplayPanel, Keypad, KeyButton, HoldPanel
-      math/                 engine, format, steps, keys
+      math/                 engine, format, keys, aiSteps (checks AI plans), normalize
       __tests__/
+    scan/                   ScanSheet (scan a calculation), pickImage (camera/library -> JPEG)
     history/
       HistoryContext.js     history state: device storage for guests, Firestore when signed in
       HistoryScreen.js      Recent / Starred list
@@ -130,8 +163,10 @@ src/
       __tests__/
     auth/                   AuthContext (Google sign-in -> Firebase Auth)
     settings/               SettingsScreen, SettingsContext, settingsStore
-  services/firebase.js      Firebase app, Auth, Firestore
+  services/firebase.js      Firebase app, Auth, Firestore, Functions
+  services/ai.js            calls the AI Cloud Functions
   theme/                    colours, fonts
+functions/                  Cloud Functions: scanEquation, explainSteps (LLM calls + daily quotas)
 firestore.rules             security rules (publish in the Firebase console)
 firestore-tests/            rules tests (npm run test:rules)
 ```
