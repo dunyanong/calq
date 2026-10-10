@@ -10,15 +10,16 @@ import { logger } from 'firebase-functions';
  * @param {string} p.model
  * @param {object[]} p.messages
  * @param {number} [p.maxTokens]
+ * @param {number} [p.temperature]
  * @returns {Promise<object>} the JSON object the model replied with
  */
-export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 800 }) {
+export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 800, temperature = 0 }) {
   let res;
   try {
     res = await fetch(baseUrl.replace(/\/+$/, '') + '/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
-      body: JSON.stringify({ model, messages, temperature: 0, max_tokens: maxTokens }),
+      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
       signal: AbortSignal.timeout(45_000),
     });
   } catch (e) {

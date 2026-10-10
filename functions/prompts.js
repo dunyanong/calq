@@ -32,8 +32,17 @@ You get an expression in calculator notation and the angle mode (deg or rad).
 ${SYNTAX}
 
 Plan the evaluation as ordered steps. Each step has:
-- "parts": sub-expressions copied EXACTLY, character for character, from the ORIGINAL expression, that are worked out in this step
+- "parts": sub-expressions copied EXACTLY, character for character, from the current base expression
+  (the original, or the latest rewrite), that are worked out in this step
 - "note": what happens, max 8 words, e.g. "Sine of 30°", "Powers before multiplication"
+
+A step may have "rewrite" instead of "parts": the whole expression rewritten in an exactly equal,
+easier form, so a person can do it by hand. Use it to break down hard arithmetic:
+- long multiplication by place value: 489×73 → 489×70+489×3
+- long division by splitting the dividend: 7488÷24 → 7200÷24+288÷24
+- distributing or regrouping: 25×36 → 25×4×9
+Only exact whole numbers or short decimals in rewrites, never rounded values.
+After a rewrite, later parts are copied from the rewrite.
 
 Rules:
 - Order of operations: innermost brackets and function calls first, then powers/roots/factorials,
@@ -48,4 +57,7 @@ Rules:
 Example — expression: 2+3×sin(30)², angle: deg
 {"steps":[{"parts":["sin(30)"],"note":"Sine of 30°"},{"parts":["sin(30)²"],"note":"Square it"},{"parts":["3×sin(30)²"],"note":"Multiply before adding"},{"parts":["2+3×sin(30)²"],"note":"Add to get the result"}]}
 
-Reply with JSON only: {"steps":[{"parts":["..."],"note":"..."}]}`;
+Example — expression: 489×73+12, angle: deg
+{"steps":[{"rewrite":"489×70+489×3+12","note":"Split 73 into 70 + 3"},{"parts":["489×70","489×3"],"note":"Multiply each part"},{"parts":["489×70+489×3"],"note":"Add the partial products"},{"parts":["489×70+489×3+12"],"note":"Add 12"}]}
+
+Reply with JSON only: {"steps":[{"parts":["..."],"note":"..."} or {"rewrite":"...","note":"..."}]}`;

@@ -56,14 +56,12 @@ test('DEL removes a whole function token', async () => {
   expect(screen.queryByText('2sin(')).toBeNull();
 });
 
-test('holding a calculation shows workings, and Pin adds the pinned pill', async () => {
+test('holding a calculation asks guests to sign in for steps, and Pin adds the pinned pill', async () => {
   await renderApp();
   for (const k of ['(', '3', '+', '4', ')', '×', '2']) press(k);
   press('=');
   fireEvent(screen.getByText('= 14').parent, 'longPress');
-  expect(screen.getByText('STEP 2 — GROUPED TERMS RESOLVED')).toBeTruthy();
-  expect(screen.getByText('7×2')).toBeTruthy();
-  expect(screen.getByText('Sign in for detailed steps')).toBeTruthy(); // tests run as a guest
+  expect(screen.getByText('Sign in to see steps')).toBeTruthy(); // tests run as a guest
   const ones = screen.getAllByText('1').length; // the "1" key
   press('Pin');
   // the pinned pill appears showing "1"

@@ -1,18 +1,25 @@
 // Turns an AI evaluation plan into workings, with every number computed here.
 //
 // The model (functions/prompts.js STEPS_PROMPT) only says WHICH parts of the
-// original expression are worked out in each step and adds a short note.
+// expression are worked out in each step and adds a short note.
 // Each part is evaluated with math.js and replaced by its value. After every
 // step the whole expression must still equal the original value, so a wrong
 // order of operations or a misquoted part rejects the plan (null), and the
-// caller keeps the regular buildSteps() workings.
+// panel shows "Couldn't explain this one" instead of steps that might be wrong.
+//
+// A step can instead "rewrite" the expression into an equivalent easier form
+// (489×73 -> 489×70+489×3). Rewrites are the only place the model writes
+// numbers, so they must match the original value almost exactly; later
+// parts are quoted from the latest rewrite.
 import { closeParens, evaluate } from './engine';
 import { asOperand } from './format';
 import { normalizeExpr } from './normalize';
 
 const MAX_STEPS = 12;
 
-const same = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+// Steps built from math.js values carry 10-digit rounding; model-written rewrites must be exact.
+const same = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
+const EXACT = 1e-12;
 
 /**
  * Where `part` occurs in `src`, without partly overlapping a span already
@@ -50,11 +57,11 @@ function render(src, spans) {
  * @param {string} expr   expression as entered
  * @param {string} res    formatted result
  * @param {'deg'|'rad'} angle
- * @param {{parts: string[], note: string}[]} plan
+ * @param {{parts?: string[], rewrite?: string, note: string}[]} plan
  * @returns {{label: string, expr: string}[] | null}  null when the plan does not check out
  */
 export function stepsFromPlan(expr, res, angle, plan) {
-  const src = closeParens(expr);
+  let src = closeParens(expr);
   const target = evaluate(src, angle);
   if (target === null || !Array.isArray(plan) || plan.length === 0) return null;
 
@@ -63,6 +70,16 @@ export function stepsFromPlan(expr, res, angle, plan) {
   let spans = [];
 
   for (const step of plan.slice(0, MAX_STEPS)) {
+    if (step.rewrite) {
+      const rewritten = closeParens(normalizeExpr(step.rewrite));
+      const v = evaluate(rewritten, angle);
+      if (v === null || !same(v, target, EXACT)) return null;
+      if (rewritten === render(src, spans)) continue;
+      src = rewritten;
+      spans = [];
+      add(String(step.note || '').trim() || 'rewritten', rewritten);
+      continue;
+    }
     let next = spans;
     for (const raw of step.parts || []) {
       let part = String(raw);

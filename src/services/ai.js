@@ -11,7 +11,8 @@ const MESSAGES = {
 
 /** Error with a message that can be shown to the user. */
 function friendly(e) {
-  return new Error(MESSAGES[e?.code] || 'Something went wrong, try again');
+  // a dropped connection also arrives as functions/internal
+  return new Error(MESSAGES[e?.code] || 'Something went wrong. Check your connection');
 }
 
 async function call(name, data) {
@@ -37,12 +38,13 @@ const planCache = new Map();
 /**
  * @param {string} expr
  * @param {'deg'|'rad'} angle
- * @returns {Promise<{parts: string[], note: string}[]>}
+ * @param {{retry?: boolean}} [opts]  retry: skip the cache and ask for a different plan
+ * @returns {Promise<{parts?: string[], rewrite?: string, note: string}[]>}
  */
-export async function explainSteps(expr, angle) {
+export async function explainSteps(expr, angle, { retry = false } = {}) {
   const key = angle + '|' + expr;
-  if (!planCache.has(key)) {
-    const { steps } = await call('explainSteps', { expr, angle });
+  if (retry || !planCache.has(key)) {
+    const { steps } = await call('explainSteps', { expr, angle, retry });
     planCache.set(key, steps);
   }
   return planCache.get(key);

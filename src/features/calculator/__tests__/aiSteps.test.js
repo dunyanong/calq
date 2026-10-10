@@ -42,6 +42,23 @@ describe('stepsFromPlan', () => {
     expect(steps[1].expr).toBe('10−6');
   });
 
+  test('rewrites break down hard arithmetic, then parts quote the rewrite', () => {
+    const plan = [
+      { rewrite: '489×70+489×3+12', note: 'Split 73 into 70 + 3' },
+      { parts: ['489×70', '489×3'], note: 'Multiply each part' },
+      { parts: ['489×70+489×3'], note: 'Add the partial products' },
+      { parts: ['489×70+489×3+12'], note: 'Add 12' },
+    ];
+    const steps = stepsFromPlan('489×73+12', '35709', 'deg', plan);
+    expect(exprs(steps)).toEqual(['489×73+12', '489×70+489×3+12', '34230+1467+12', '35697+12', '= 35709']);
+    expect(steps[1].label).toBe('Step 2 — Split 73 into 70 + 3');
+  });
+
+  test('rejects a rewrite with a wrong number, even off by one in a big result', () => {
+    expect(stepsFromPlan('489×73', '35697', 'deg', [{ rewrite: '489×70+489×4', note: 'x' }])).toBeNull();
+    expect(stepsFromPlan('4890001×73', '356970073', 'deg', [{ rewrite: '356970074', note: 'x' }])).toBeNull();
+  });
+
   test('rejects a wrong order of operations', () => {
     expect(stepsFromPlan('2×3+4', '10', 'deg', [{ parts: ['3+4'], note: 'Add' }])).toBeNull();
   });

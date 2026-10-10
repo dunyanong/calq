@@ -23,7 +23,8 @@ const LLM_BASE_URL = defineString('LLM_BASE_URL', { default: 'https://openrouter
 const OCR_MODEL = defineString('OCR_MODEL', { default: 'qwen/qwen3-vl-235b-a22b-instruct' });
 const STEPS_MODEL = defineString('STEPS_MODEL', { default: 'qwen/qwen3-235b-a22b-2507' });
 const SCANS_PER_DAY = defineInt('SCANS_PER_DAY', { default: 30 });
-const STEPS_PER_DAY = defineInt('STEPS_PER_DAY', { default: 100 });
+// Steps load on every hold of a complicated calculation (cached per session in the app).
+const STEPS_PER_DAY = defineInt('STEPS_PER_DAY', { default: 200 });
 
 const MAX_IMAGE_B64 = 3_000_000; // ~2.2 MB JPEG; the app sends ~200 KB
 const MAX_EXPR = 200; // same limit as history items in firestore.rules
@@ -52,8 +53,8 @@ async function useQuota(uid, kind, limit) {
   });
 }
 
-const llm = (model, messages, maxTokens) =>
-  chatJson({ baseUrl: LLM_BASE_URL.value(), apiKey: LLM_API_KEY.value(), model, messages, maxTokens });
+const llm = (model, messages, maxTokens, temperature = 0) =>
+  chatJson({ baseUrl: LLM_BASE_URL.value(), apiKey: LLM_API_KEY.value(), model, messages, maxTokens, temperature });
 
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -98,13 +99,15 @@ export const explainSteps = onCall(OPTS, async (request) => {
       { role: 'user', content: `Expression: ${expr}\nAngle: ${angle}` },
     ],
     1200,
+    request.data?.retry === true ? 0.6 : 0, // a retry follows a plan the app rejected: try another one
   );
   const steps = (Array.isArray(reply.steps) ? reply.steps : [])
     .slice(0, 12)
     .map((s) => ({
       parts: (Array.isArray(s?.parts) ? s.parts : []).map((p) => str(p, MAX_EXPR)).filter(Boolean).slice(0, 8),
+      rewrite: str(s?.rewrite, MAX_EXPR),
       note: str(s?.note, 60),
     }))
-    .filter((s) => s.parts.length > 0);
+    .filter((s) => s.parts.length > 0 || s.rewrite);
   return { steps };
 });
