@@ -150,8 +150,3 @@ export function tokenAfter(s) {
   const tok = MULTI_TOKENS.find((x) => s.startsWith(x));
   return tok ? tok.length : 1;
 }
-
-/** DEL: removes the last key press, so "sin(" goes in one step, not "(" then "n". */
-export function deleteLast(entry) {
-  return entry.slice(0, entry.length - tokenBefore(entry));
-}

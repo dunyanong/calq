@@ -237,8 +237,8 @@ describe('keypad', () => {
   });
 });
 
-describe('deleteLast', () => {
-  const { deleteLast, tokenBefore, tokenAfter } = require('@/features/calculator/math/keys');
+describe('tokenBefore / tokenAfter', () => {
+  const { tokenBefore, tokenAfter } = require('@/features/calculator/math/keys');
   test('cursor steps over whole key presses', () => {
     expect(tokenBefore('2+sin(')).toBe(4);
     expect(tokenBefore('2+3')).toBe(1);
@@ -248,14 +248,12 @@ describe('deleteLast', () => {
     expect(tokenAfter('')).toBe(0);
   });
 
-  test('removes whole function tokens', () => {
-    expect(deleteLast('2+sin(')).toBe('2+');
-    expect(deleteLast('sin⁻¹(')).toBe('');
-    expect(deleteLast('log_b(')).toBe('');
-    expect(deleteLast('∫(')).toBe('');
-    expect(deleteLast('2+d/dx(')).toBe('2+');
-    expect(deleteLast('∫(x')).toBe('∫(');
-    expect(deleteLast('12')).toBe('1');
-    expect(deleteLast('')).toBe('');
+  test('a function key is one press', () => {
+    expect(tokenBefore('sin⁻¹(')).toBe(6);
+    expect(tokenBefore('log_b(')).toBe(6);
+    expect(tokenBefore('∫(')).toBe(2);
+    expect(tokenBefore('2+d/dx(')).toBe(5);
+    expect(tokenBefore('∫(x')).toBe(1);
+    expect(tokenBefore('12')).toBe(1);
   });
 });
