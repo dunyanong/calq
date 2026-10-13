@@ -2,6 +2,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { angleMode } from '@/components/AngleBadge';
 import { latexText, toLatexMath } from './latex';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -12,7 +13,7 @@ export function formatDate(ms) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const angleLabel = (angle) => (angle === 'rad' ? 'RAD' : 'DEG');
+const angleLabel = (angle) => angleMode(angle).short;
 
 // Quote a CSV field when it holds a comma, quote or line break.
 const csvField = (v) => {

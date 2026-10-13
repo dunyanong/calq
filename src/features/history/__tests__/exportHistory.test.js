@@ -9,6 +9,7 @@ const items = [
   { id: 'a', expr: '(3+4)×12−5', result: '79', angle: 'deg', pinned: true, createdAt: at, updatedAt: at },
   { id: 'b', expr: 'sin(π÷2)', result: '1', angle: 'rad', pinned: false, createdAt: at, updatedAt: at },
 ];
+const gradItem = { id: 'c', expr: 'sin(100)', result: '1', angle: 'grad', pinned: false, createdAt: at, updatedAt: at };
 
 test('CSV has a BOM, header and one row per item', () => {
   const csv = toCSV(items);
@@ -19,6 +20,13 @@ test('CSV has a BOM, header and one row per item', () => {
     'sin(π÷2),1,RAD,no,2026-10-05 14:03',
     '',
   ]);
+});
+
+test('gradians are labelled GRAD in every format', () => {
+  expect(toCSV([gradItem])).toContain('sin(100),1,GRAD,no,');
+  expect(toText([gradItem])).toContain('(GRAD, ');
+  expect(toMarkdown([gradItem])).toContain('| GRAD |');
+  expect(toLatex([gradItem])).toContain('\\text{GRAD, ');
 });
 
 test('CSV quotes fields with commas and quotes', () => {
