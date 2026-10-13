@@ -1,4 +1,4 @@
-// Calculator screen (prototype "Scientific Calculator").
+// Calculator screen: header, display, keypad, and the scan / angle / hold modals.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ const MAX_ENTRY = 120; // Firestore rule allows 200; keep the display readable
 const MAX_SAVED = 200; // Firestore rule for history expressions and results (a formula can be long)
 const MAX_CARDS = 100; // past calculations on the display; History has them all
 const HIDDEN_PAD = 54; // keypad height when collapsed to its handle
-const DISPLAY_SHARE = 0.47; // display height / body height (330px of ~700 in the prototype)
+const DISPLAY_SHARE = 0.47; // display height / body height (about 330px of 700)
 const KEYPAD_MIN = 360; // the 5-row numeric page needs this much (plus the safe area) on small phones
 // The live "= …" preview is shown once the entry has something to work out
 // (an operator, a function, or one of the variables A–D, F, M).
@@ -68,7 +68,7 @@ export default function Calculator() {
   const heldItem = history.items.find((it) => it.id === held.id) || null;
   const lastItem = sessionItems[sessionItems.length - 1];
 
-  // Display grows when the keypad is hidden (prototype dispH transition).
+  // Display grows when the keypad is hidden.
   useEffect(() => {
     if (!bodyH) return;
     const target = kbHidden
@@ -166,7 +166,7 @@ export default function Calculator() {
   };
 
   const submit = () => {
-    if (!entry.text.trim() || busy) return;
+    if (!entry.text.trim()) return;
     // = inside a box closes it first, like ▶ (d/dx(sin(x|,□) -> d/dx(sin(x),□)).
     // Variables are saved as their values, so history and its steps stay right when they change.
     const done = completeEntry(freezeVars(closeBox(entry).text.trim(), vars)); // empty limits / point mean "a formula, please"
@@ -197,7 +197,7 @@ export default function Calculator() {
     }
     const v = formula ? formula.value : evaluate(expr, angle);
     if (v === null) {
-      fail(expr.includes('x') && !hasCalculus(expr) ? 'Use x inside ∫, d/dx or Σ' : 'Check the expression');
+      fail(expr.includes('x') && !hasCalculus(expr) ? 'Use x inside ∫, d/dx, Σ or Π' : 'Check the expression');
       return;
     }
     addResult(expr, formatNumber(v, output), v);
