@@ -17,8 +17,13 @@ let angleMode = 'deg';
 // True while ∫ or d/dx samples f(x): they need the raw values (ln(sin x) near π).
 let sampling = false;
 
-const toRad = (x) => (angleMode === 'deg' ? (x * Math.PI) / 180 : x);
-const fromRad = (x) => (angleMode === 'deg' ? (x * 180) / Math.PI : x);
+/** Radians in one unit of each angle mode (a full turn is 360°, 2π rad or 400 grad). */
+export const RAD_PER = { deg: Math.PI / 180, rad: 1, grad: Math.PI / 200 };
+// Size of a right angle in each mode, for the exact "tan undefined" check.
+const QUARTER = { deg: 90, grad: 100 };
+
+const toRad = (x) => x * (RAD_PER[angleMode] ?? 1);
+const fromRad = (x) => x / (RAD_PER[angleMode] ?? 1);
 // Removes floating-point noise such as sin(180°) = 1.2e-16.
 const clean = (v) => (!sampling && Math.abs(v) < 1e-12 ? 0 : v);
 
@@ -32,8 +37,9 @@ math.import({
   tcos: (x) => clean(Math.cos(toRad(num(x)))),
   ttan: (x) => {
     num(x);
-    // tan(90°), tan(270°)… are undefined
-    if (angleMode === 'deg' && (((x % 180) + 180) % 180) === 90) return NaN;
+    // tan(90°), tan(270°), tan(100 grad)… are undefined
+    const q = QUARTER[angleMode];
+    if (q && (((x % (2 * q)) + 2 * q) % (2 * q)) === q) return NaN;
     return clean(Math.tan(toRad(x)));
   },
   tasin: (x) => fromRad(Math.asin(num(x))),
@@ -171,7 +177,7 @@ export const hasTrig = (expr) => /(?:sin|cos|tan)(?:⁻¹)?\(/.test(expr);
 /**
  * Evaluates a display expression.
  * @param {string} expr  e.g. "sin(30)+√(16)×2"
- * @param {'deg'|'rad'} angle
+ * @param {'deg'|'rad'|'grad'} angle
  * @returns {number|null} the value, or null for errors / non-finite results
  */
 export function evaluate(expr, angle = 'deg') {

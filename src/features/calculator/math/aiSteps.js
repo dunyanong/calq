@@ -56,7 +56,7 @@ function render(src, spans) {
 /**
  * @param {string} expr   expression as entered
  * @param {string} res    formatted result
- * @param {'deg'|'rad'} angle
+ * @param {'deg'|'rad'|'grad'} angle
  * @param {{parts?: string[], rewrite?: string, note: string}[]} plan
  * @returns {{label: string, expr: string}[] | null}  null when the plan does not check out
  */

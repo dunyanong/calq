@@ -39,6 +39,11 @@ describe('d/dx without a point', () => {
     expect(d('d/dx(x²)', 'deg')).toEqual({ text: '2x' });
   });
 
+  test('gradian mode keeps the π÷200 that gradians bring in', () => {
+    expect(d('d/dx(sin(x))', 'grad')).toEqual({ text: '(π÷200)cos(x)' });
+    expect(d('d/dx(sin(x),0)', 'grad')).toBeNull(); // with a point it is numeric
+  });
+
   test('a result without x is a number', () => {
     expect(d('d/dx(3x)')).toEqual({ value: 3 });
     expect(d('d/dx(5)')).toEqual({ value: 0 });
@@ -80,6 +85,9 @@ describe('∫ without limits', () => {
     expect(checkAntiderivative('x²', 'x^3', 'rad')).toBeNull();
     expect(checkAntiderivative('sin(x)', '-cos(x)', 'deg')).toBeNull(); // radian answer in degree mode
     expect(checkAntiderivative('sin(x)', '-(180/pi)*cos(x)', 'deg')).not.toBeNull();
+    expect(checkAntiderivative('sin(x)', '-cos(x)', 'grad')).toBeNull();
+    expect(checkAntiderivative('sin(x)', '-(180/pi)*cos(x)', 'grad')).toBeNull(); // degree answer in gradian mode
+    expect(checkAntiderivative('sin(x)', '-(200/pi)*cos(x)', 'grad')).not.toBeNull();
     expect(checkAntiderivative('x²', '∫(x²)', 'rad')).toBeNull(); // no cheating
     expect(checkAntiderivative('x²', 'hello', 'rad')).toBeNull();
     expect(checkAntiderivative('x²', '', 'rad')).toBeNull();
