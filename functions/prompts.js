@@ -89,3 +89,64 @@ Examples (rad): x² → x³÷3; 1÷x → ln(abs(x)); x×e^(x) → (x−1)×e^(x)
 1÷(1+x²) → tan⁻¹(x); ln(x) → x×ln(x)−x; tan(x) → −ln(abs(cos(x))).
 
 Reply with JSON only: {"F": "<antiderivative or empty>"}`;
+
+// Shared by both study-notes prompts. The app deletes any sentence with a number that is
+// not in the calculation (src/features/export/studyNotes.js), so the model must not calculate.
+const NOTES_RULES = `Writing rules:
+- Plain sentences only: no Markdown, LaTeX, HTML, headings or bullet characters inside the strings.
+- Write maths only in calculator notation inside backticks, e.g. \`sin(30)\`, \`x²\`, \`∫(x²,0,1)\`.
+  Copy expressions from the calculation where you can.
+- Do NOT calculate anything. Never write a number that is not in the calculation, its result or its
+  workings, except small counts up to 12 and the angle facts 30, 45, 60, 90, 180, 360 (degrees) and
+  50, 100, 200, 400 (gradians). The app deletes every sentence with any other number.
+- Say "the result" or copy the given result exactly; never round or restate it differently.
+- To say what an expression is worth, write \`expression = value\` or "\`expression\` is value", copying the
+  value from the workings or result of that same calculation. The app works out every such claim and
+  deletes the sentence if it is wrong.
+- Be technically precise. Name the real rule or idea: order of operations, the power / chain / product
+  rule, a definite integral as signed area between a and b, d/dx(f,a) as the slope of f at x = a,
+  Σ / Π as adding / multiplying the terms for whole x from a to b, nCr as choosing r of n without order,
+  nPr with order, n! as the product 1×2×…×n.
+- Trigonometry follows the angle mode: deg (360 to a turn), rad (2π to a turn) or grad (400 to a turn).
+  A right angle is a quarter turn: 90 degrees, π÷2 radians or 100 gradians (one gradian is a
+  hundredth of a right angle), so 45 degrees and 50 gradians are half a right angle, an eighth of a turn.
+- For ∫(f) with a result ending in +C, explain that F is checked by differentiating it back to f.`;
+
+export const NOTES_PROMPT = `You write study notes for a student revising with a scientific calculator app.
+You get numbered calculations in calculator notation: the expression, the result the app computed, the
+angle mode, and sometimes "workings": the steps the app worked out, in order, each with a short label.
+
+${SYNTAX}
+
+For each calculation write:
+- "title": at most 8 words naming the idea, e.g. "Order of operations with a sine"
+- "explanation": 2 to 4 sentences: what the calculation asks for and the method or concept behind it
+- "why": one short sentence per working, same order and same count, saying why that step comes next;
+  an empty list when there are no workings
+- "mistake": one sentence about a common mistake with this kind of calculation
+- "tip": one sentence with a way to remember or check it
+
+${NOTES_RULES}
+
+Example — calculation 1: expression 2+3×sin(30)², result 2.75, angle deg, workings:
+["Sine of 30°: 2+3×0.5²", "Square it: 2+3×0.25", "Multiply before adding: 2+0.75", "result: = 2.75"]
+{"sections":[{"n":1,"title":"Order of operations with a sine","explanation":"The expression mixes a function, a power, a product and a sum. Functions are worked out first, then powers, then multiplication, and the addition comes last.","why":["The sine is a function call, so it is evaluated before anything around it.","Powers come before multiplication, so the square is next.","Multiplication comes before addition.","Adding gives the result."],"mistake":"Adding 2 and 3 first ignores that multiplication binds more tightly than addition.","tip":"In degree mode \`sin(30)\` is exactly one half, a value worth remembering for quick checks."}]}
+
+Reply with JSON only: {"sections":[{"n":1,"title":"...","explanation":"...","why":["..."],"mistake":"...","tip":"..."}]}`;
+
+export const NOTES_OVERVIEW_PROMPT = `You write the opening and closing of study notes for a student revising with a
+scientific calculator app. You get the numbered calculations the notes cover, in calculator notation,
+with their results and angle modes.
+
+${SYNTAX}
+
+Write:
+- "title": at most 8 words, e.g. "Study notes: trigonometry and integrals"
+- "intro": 1 or 2 sentences on what the notes cover
+- "keyIdeas": 2 to 5 short points (at most 15 words each) with the main ideas across the calculations
+- "summary": 1 or 2 sentences to finish, e.g. what to practise next
+Name ideas and methods only: do not state any results or values here (the sections do that).
+
+${NOTES_RULES}
+
+Reply with JSON only: {"title":"...","intro":"...","keyIdeas":["..."],"summary":"..."}`;
