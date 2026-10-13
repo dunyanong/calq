@@ -16,6 +16,7 @@ import { CameraIcon } from '@/components/Icons';
 import { evaluate } from '@/features/calculator/math/engine';
 import { formatNumber } from '@/features/calculator/math/format';
 import { normalizeExpr } from '@/features/calculator/math/normalize';
+import { indefiniteIntegrand, symbolicDerivative } from '@/features/calculator/math/symbolic';
 import { scanEquation } from '@/services/ai';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -57,6 +58,16 @@ function Body({ t, angle, output, onInsert }) {
 
   const expr = normalizeExpr(s.text);
   const value = expr ? evaluate(expr, angle) : null;
+  // ∫ without limits and d/dx without a point give formulas, not numbers
+  const formula = value === null && expr ? symbolicDerivative(expr, angle) : null;
+  const shown =
+    value !== null
+      ? '= ' + formatNumber(value, output)
+      : formula?.text
+        ? '= ' + formula.text
+        : expr && indefiniteIntegrand(expr)?.f
+          ? 'Insert, then press = for the formula'
+          : 'Can’t work this out — edit it';
 
   return (
     <>
@@ -96,9 +107,7 @@ function Body({ t, angle, output, onInsert }) {
             placeholder="e.g. 2×(3+4)"
             placeholderTextColor="#93958f"
           />
-          <Text style={[styles.preview, { color: value === null ? '#93958f' : BLUE }]}>
-            {value === null ? 'Can’t evaluate this yet' : '= ' + formatNumber(value, output)}
-          </Text>
+          <Text style={[styles.preview, { color: shown.startsWith('=') ? BLUE : '#93958f' }]}>{shown}</Text>
           {!!s.note && <Text style={styles.hint}>{s.note}</Text>}
           <View style={styles.row}>
             <Button label="Retake" t={t} onPress={() => setS(EMPTY)} />

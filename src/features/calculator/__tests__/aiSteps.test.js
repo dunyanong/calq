@@ -87,6 +87,16 @@ describe('normalizeExpr', () => {
     expect(normalizeExpr('sin^-1(1)')).toBe('sin⁻¹(1)');
     expect(normalizeExpr('√16 + [2+3]')).toBe('√(16)+(2+3)');
     expect(normalizeExpr('2**3 – 1')).toBe('2^3−1');
+    expect(normalizeExpr('2x3 + 4 X 5')).toBe('2×3+4×5');
+  });
+
+  test('x next to a letter or bracket is the variable, not times', () => {
+    // used to become 2×+1, which evaluated to 2
+    expect(normalizeExpr('2x+1')).toBe('2x+1');
+    expect(normalizeExpr('X^2')).toBe('x^2');
+    expect(normalizeExpr('d/dx(x^2 - 3x, 2)')).toBe('d/dx(x^2−3x,2)');
+    expect(normalizeExpr('integral(x^2, 0, 1)')).toBe('∫(x^2,0,1)');
+    expect(normalizeExpr('∫(sqrt(x),0,4)')).toBe('∫(√(x),0,4)');
   });
 
   test('leaves calculator notation alone', () => {

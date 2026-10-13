@@ -1,18 +1,20 @@
 // Calq Cloud Functions: AI features for signed-in users.
-//   scanEquation  photo/screenshot -> expression in calculator notation (vision model)
-//   explainSteps  expression -> evaluation plan with short notes (text model)
+//   scanEquation      photo/screenshot -> expression in calculator notation (vision model)
+//   explainSteps      expression -> evaluation plan with short notes (text model)
+//   integrateFormula  f(x) -> antiderivative F(x) for ∫ without limits (text model);
+//                     the app accepts F only if F′ = f numerically (math/symbolic.js)
 // The app checks everything returned here with its own math.js parser and
 // computes every number itself, so the models never do arithmetic for the user.
 //
 // Config (see README "AI features"):
 //   secret  LLM_API_KEY                 firebase functions:secrets:set LLM_API_KEY
-//   params  LLM_BASE_URL, OCR_MODEL, STEPS_MODEL, SCANS_PER_DAY, STEPS_PER_DAY
+//   params  LLM_BASE_URL, OCR_MODEL, STEPS_MODEL, SCANS_PER_DAY, STEPS_PER_DAY, INTEGRALS_PER_DAY
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { defineInt, defineSecret, defineString } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { chatJson } from './llm.js';
-import { OCR_PROMPT, STEPS_PROMPT } from './prompts.js';
+import { INTEGRAL_PROMPT, OCR_PROMPT, STEPS_PROMPT } from './prompts.js';
 
 initializeApp();
 const db = getFirestore();
@@ -25,6 +27,7 @@ const STEPS_MODEL = defineString('STEPS_MODEL', { default: 'qwen/qwen3-235b-a22b
 const SCANS_PER_DAY = defineInt('SCANS_PER_DAY', { default: 30 });
 // Steps load on every hold of a complicated calculation (cached per session in the app).
 const STEPS_PER_DAY = defineInt('STEPS_PER_DAY', { default: 200 });
+const INTEGRALS_PER_DAY = defineInt('INTEGRALS_PER_DAY', { default: 50 });
 
 const MAX_IMAGE_B64 = 3_000_000; // ~2.2 MB JPEG; the app sends ~200 KB
 const MAX_EXPR = 200; // same limit as history items in firestore.rules
@@ -38,14 +41,14 @@ function requireUser(request) {
 
 /**
  * Per-user daily quota in usage/{uid} (firestore.rules denies clients, the Admin SDK bypasses rules).
- * @param {'scan'|'steps'} kind
+ * @param {'scan'|'steps'|'integral'} kind
  */
 async function useQuota(uid, kind, limit) {
   const day = new Date().toISOString().slice(0, 10);
   const ref = db.doc('usage/' + uid);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const d = snap.exists && snap.get('day') === day ? snap.data() : { day, scan: 0, steps: 0 };
+    const d = snap.exists && snap.get('day') === day ? snap.data() : { day, scan: 0, steps: 0, integral: 0 };
     if ((d[kind] || 0) >= limit) {
       throw new HttpsError('resource-exhausted', 'Daily limit reached, try again tomorrow');
     }
@@ -110,4 +113,25 @@ export const explainSteps = onCall(OPTS, async (request) => {
     }))
     .filter((s) => s.parts.length > 0 || s.rewrite);
   return { steps };
+});
+
+export const integrateFormula = onCall(OPTS, async (request) => {
+  const uid = requireUser(request);
+  const f = request.data?.f;
+  const angle = request.data?.angle === 'rad' ? 'rad' : 'deg';
+  if (typeof f !== 'string' || !f.trim() || f.length > MAX_EXPR) {
+    throw new HttpsError('invalid-argument', 'Expected a function of x');
+  }
+  await useQuota(uid, 'integral', INTEGRALS_PER_DAY.value());
+
+  const reply = await llm(
+    STEPS_MODEL.value(),
+    [
+      { role: 'system', content: INTEGRAL_PROMPT },
+      { role: 'user', content: `f(x) = ${f}\nAngle: ${angle}` },
+    ],
+    400,
+    request.data?.retry === true ? 0.6 : 0, // a retry follows an answer the app rejected
+  );
+  return { F: str(reply.F, MAX_EXPR) };
 });

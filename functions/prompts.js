@@ -1,4 +1,4 @@
-// System prompts. Both describe Calq's display syntax (see src/features/calculator/math/engine.js),
+// System prompts. All describe Calq's display syntax (see src/features/calculator/math/engine.js),
 // so model output can be checked by the app's own parser.
 
 const SYNTAX = `Calculator notation (use ONLY these):
@@ -7,7 +7,11 @@ const SYNTAX = `Calculator notation (use ONLY these):
 - brackets ( ) and "," between function arguments
 - constants: π, e; scientific notation with E, e.g. 1.5E−3
 - functions (always followed by "("): sin cos tan sin⁻¹ cos⁻¹ tan⁻¹ sinh cosh tanh log (base 10) ln
-  log_b(base,x) √ ∛ ˣ√(n,x) abs nPr(n,r) nCr(n,r) ceil floor gcd lcm`;
+  log_b(base,x) √ ∛ ˣ√(n,x) abs nPr(n,r) nCr(n,r) ceil floor gcd lcm
+- calculus: ∫(f,a,b) is the integral of f from x=a to x=b, ∫(f) the indefinite integral;
+  d/dx(f,a) is the derivative of f at x=a, d/dx(f) the derivative as a formula;
+  Σ(f,a,b) / Π(f,a,b) add / multiply f for whole x from a to b.
+  The variable x may only appear inside f.`;
 
 export const OCR_PROMPT = `You read maths from photos and screenshots for a scientific calculator app.
 Transcribe the calculation in the image (handwritten or printed) as ONE line of calculator notation.
@@ -21,7 +25,10 @@ Rules:
 - Write × explicitly for a multiplication sign, dot, or "x" used as times.
 - Drop "=", anything after it, "?", degree signs, question numbers, units and notes.
 - If there are several calculations, pick the most prominent one.
-- If it needs unknowns/variables (an equation to solve), return an empty expr.
+- A definite integral becomes ∫(f,a,b), e.g. ∫₀¹ x² dx → ∫(x²,0,1). Write × between x and a bracket: x×(x+1).
+- A derivative at a point becomes d/dx(f,a), e.g. "d/dx (x³) at x = 2" → d/dx(x³,2).
+- An indefinite integral becomes ∫(f), e.g. ∫ x² dx → ∫(x²); a derivative without a point becomes d/dx(f).
+- An equation to solve (with "=" and an unknown): return an empty expr.
 - Do not solve it. Read carefully: 1 vs 7, 5 vs S, 0 vs 6, minus vs dash.
 
 Reply with JSON only: {"expr": "<expression or empty>", "note": "<max 10 words if anything was unclear, else empty>"}`;
@@ -61,3 +68,23 @@ Example — expression: 489×73+12, angle: deg
 {"steps":[{"rewrite":"489×70+489×3+12","note":"Split 73 into 70 + 3"},{"parts":["489×70","489×3"],"note":"Multiply each part"},{"parts":["489×70+489×3"],"note":"Add the partial products"},{"parts":["489×70+489×3+12"],"note":"Add 12"}]}
 
 Reply with JSON only: {"steps":[{"parts":["..."],"note":"..."} or {"rewrite":"...","note":"..."}]}`;
+
+export const INTEGRAL_PROMPT = `You find antiderivatives for a scientific calculator app.
+You get f(x) in calculator notation and the angle mode (deg or rad). Give F(x) with F′(x) = f(x).
+
+${SYNTAX}
+Here x is the variable and may appear anywhere in F.
+
+Rules:
+- Use ONLY the notation above: no ∫, d/dx, Σ, Π, no |…| (write abs(…)), and no "+ C" (the app adds it).
+- Write × between factors, except a number before x or a function: 3x², 2sin(x), x×e^(x).
+- Prefer the simplest standard form, e.g. ln(abs(x)) for 1÷x.
+- Angle mode deg: sin cos tan take degrees and sin⁻¹ cos⁻¹ tan⁻¹ return degrees, so the chain rule brings in
+  180÷π, e.g. f = sin(x) → F = −(180÷π)×cos(x). In rad mode as usual: F = −cos(x).
+- If F has no elementary formula (e^(−x²), sin(x)÷x, √(sin(x)) …) return an empty F. Never guess.
+- The app checks F′ = f numerically and rejects wrong answers.
+
+Examples (rad): x² → x³÷3; 1÷x → ln(abs(x)); x×e^(x) → (x−1)×e^(x); cos(2x) → sin(2x)÷2;
+1÷(1+x²) → tan⁻¹(x); ln(x) → x×ln(x)−x; tan(x) → −ln(abs(cos(x))).
+
+Reply with JSON only: {"F": "<antiderivative or empty>"}`;

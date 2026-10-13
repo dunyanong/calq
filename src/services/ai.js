@@ -7,6 +7,7 @@ const MESSAGES = {
   'functions/resource-exhausted': 'Daily limit reached, try again tomorrow',
   'functions/deadline-exceeded': 'That took too long, try again',
   'functions/unavailable': 'AI service unavailable, try again',
+  'functions/not-found': 'This feature is not set up on the server yet',
 };
 
 /** Error with a message that can be shown to the user. */
@@ -48,4 +49,23 @@ export async function explainSteps(expr, angle, { retry = false } = {}) {
     planCache.set(key, steps);
   }
   return planCache.get(key);
+}
+
+const integralCache = new Map();
+
+/**
+ * Antiderivative for ∫ without limits. The answer is unchecked here:
+ * math/symbolic.js accepts it only if F′ = f.
+ * @param {string} f  integrand in calculator notation
+ * @param {'deg'|'rad'} angle
+ * @param {{retry?: boolean}} [opts]  retry: the last answer was wrong, ask for another one
+ * @returns {Promise<string>} F, or '' when the model says there is no formula
+ */
+export async function integrateFormula(f, angle, { retry = false } = {}) {
+  const key = angle + '|' + f;
+  if (retry || !integralCache.has(key)) {
+    const { F } = await call('integrateFormula', { f, angle, retry });
+    integralCache.set(key, typeof F === 'string' ? F : '');
+  }
+  return integralCache.get(key);
 }

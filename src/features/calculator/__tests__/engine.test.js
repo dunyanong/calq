@@ -1,5 +1,6 @@
 import { evaluate, toMathjs, closeParens, freezeRandom } from '@/features/calculator/math/engine';
-import { formatNumber, asOperand } from '@/features/calculator/math/format';
+import { freezeVars } from '@/features/calculator/math/entry';
+import { formatNumber, asOperand, operandIn } from '@/features/calculator/math/format';
 
 const calc = (expr, angle = 'deg', output = 'dec') => formatNumber(evaluate(expr, angle), output);
 
@@ -28,6 +29,10 @@ describe('evaluate', () => {
     expect(calc('2(3+1)')).toBe('8');
     expect(calc('e')).toBe('2.718281828');
     expect(calc('e^(1)')).toBe('2.718281828');
+    // a bracket after π or e multiplies, it is not a function call
+    expect(calc('π(2)')).toBe('6.283185307');
+    expect(calc('e(2)')).toBe('5.436563657');
+    expect(calc('2π²')).toBe('19.7392088');
   });
 
   test('logs and roots', () => {
@@ -53,6 +58,23 @@ describe('evaluate', () => {
     expect(calc('floor(2.7)')).toBe('2');
     expect(calc('ceil(2.1)')).toBe('3');
     expect(calc('abs(−3)')).toBe('3');
+  });
+
+  test('percent, round, Σ and Π', () => {
+    expect(calc('100+10%')).toBe('110');
+    expect(calc('200×15%')).toBe('30');
+    expect(calc('50%')).toBe('0.5');
+    expect(calc('round(2.567)')).toBe('3');
+    expect(calc('round(2.567,2)')).toBe('2.57');
+    expect(calc('Σ(x,1,100)')).toBe('5050');
+    expect(calc('Σ(x²,1,10)')).toBe('385');
+    expect(calc('Σ(1÷x²,1,1000)')).toBe('1.643934567');
+    expect(calc('Π(x,1,5)')).toBe('120');
+    expect(calc('Σ(sin(90x),1,4)', 'deg')).toBe('0'); // values at exact points keep the trig clean-up
+    expect(evaluate('Σ(x,1.5,3)')).toBeNull(); // whole-number limits only
+    expect(evaluate('Σ(x,5,1)')).toBeNull();
+    expect(evaluate('Σ(x,1,10^6)')).toBeNull(); // too many terms
+    expect(evaluate('Σ(x,1)')).toBeNull();
   });
 
   test('EXP key', () => {
@@ -111,6 +133,36 @@ describe('formatNumber', () => {
   });
 });
 
+describe('values typed into an expression', () => {
+  test('operandIn brackets a value only where it would merge with its neighbours', () => {
+    expect(operandIn('', 0, 0, 79)).toBe('79');
+    expect(operandIn('2+', 2, 2, 79)).toBe('79');
+    expect(operandIn('2', 1, 1, 79)).toBe('(79)'); // 2 then Ans is 2×79, not 279
+    expect(operandIn('3²', 2, 2, 79)).toBe('(79)'); // not 3^279
+    expect(operandIn('(5', 1, 1, 79)).toBe('(79)'); // a digit after it
+    expect(operandIn('2', 1, 1, -3)).toBe('(-3)');
+    expect(calc('2' + operandIn('2', 1, 1, 79))).toBe('158');
+  });
+
+  test('freezeVars puts in the stored values', () => {
+    const vars = { A: 12, B: 5, C: 0, D: -3, F: 1.5e-9, M: 2 };
+    expect(freezeVars('A+B', vars)).toBe('12+5');
+    expect(freezeVars('2A', vars)).toBe('2(12)');
+    expect(freezeVars('AB', vars)).toBe('12(5)');
+    expect(freezeVars('A2', vars)).toBe('(12)2');
+    expect(freezeVars('A²', vars)).toBe('12²');
+    expect(freezeVars('D²', vars)).toBe('(-3)²');
+    expect(freezeVars('F', vars)).toBe('(1.5×10^-9)');
+    expect(freezeVars('∫(2x,2,100)', vars)).toBe('∫(2x,2,100)'); // x is the unknown, never a value
+    expect(freezeVars('nCr(5,2)+C', vars)).toBe('nCr(5,2)+0'); // the C of nCr( is not a variable
+    expect(freezeVars('∫(Ax,0,1)', vars)).toBe('∫(12x,0,1)');
+    expect(freezeVars('M', {})).toBe('0'); // never stored
+    expect(calc(freezeVars('2A+B', vars))).toBe('29');
+    expect(calc(freezeVars('D²', vars))).toBe('9');
+    expect(calc(freezeVars('A2', vars))).toBe('24');
+  });
+});
+
 describe('freezeRandom', () => {
   test('replaces RanInt with an integer in range', () => {
     for (let i = 0; i < 20; i++) {
@@ -122,12 +174,73 @@ describe('freezeRandom', () => {
   });
 });
 
+describe('keypad', () => {
+  const { NUMERIC_ROWS, SCIENTIFIC_ROWS, resolveKey } = require('@/features/calculator/math/keys');
+  const keys = [...NUMERIC_ROWS, ...SCIENTIFIC_ROWS].flat();
+  const ACTIONS = ['del', 'clear', 'equals', 'ans', 'ran', 'copy', 'history', 'hyp', 'rcl', 'sto', 'mplus', 'mminus', 'sd'];
+
+  test('every key works: no "coming soon" in main, SHIFT or hyp', () => {
+    for (const k of keys) {
+      for (const act of [k.main, k.shift, k.hyp]) {
+        if (!act) continue;
+        expect(act.soon).toBeUndefined();
+        if (act.action) expect(ACTIONS).toContain(act.action);
+        // every token is accepted by the parser (E only between numbers, RanInt is replaced before parsing)
+        else if (!['E', 'RanInt('].includes(act.token)) expect(() => toMathjs('2' + act.token)).not.toThrow();
+      }
+    }
+  });
+
+  test('numeric page is 5 × 5, scientific 6 × 4; each variable is on one numeric key', () => {
+    const { VARIABLES } = require('@/features/calculator/math/keys');
+    expect(NUMERIC_ROWS.map((r) => r.length)).toEqual([5, 5, 5, 5, 5]);
+    expect(SCIENTIFIC_ROWS.map((r) => r.length)).toEqual([6, 6, 6, 6]);
+    const letters = NUMERIC_ROWS.flat().map((k) => k.alpha).filter((a) => a && a !== 'x');
+    expect(letters.sort()).toEqual([...VARIABLES].sort());
+    expect(SCIENTIFIC_ROWS.flat().some((k) => k.alpha)).toBe(false);
+  });
+
+  test('ALPHA / STO / RCL: letter keys pick a variable, the others only leave the mode', () => {
+    const open = keys.find((k) => k.face === '(');
+    const seven = keys.find((k) => k.face === '7');
+    for (const mode of ['alpha', 'sto', 'rcl']) {
+      expect(resolveKey(open, mode)).toMatchObject({ face: 'A', act: { variable: 'A' }, active: mode });
+      expect(resolveKey(seven, mode)).toMatchObject({ face: '7', act: { cancel: true }, dim: true });
+    }
+  });
+
+  test('ALPHA √ types the unknown x; STO and RCL cannot use it', () => {
+    const root = keys.find((k) => k.face === '√');
+    expect(resolveKey(root, 'alpha')).toMatchObject({ face: 'x', act: { token: 'x' } });
+    expect(resolveKey(root, 'sto')).toMatchObject({ act: { cancel: true }, dim: true });
+    expect(resolveKey(root, 'rcl')).toMatchObject({ act: { cancel: true }, dim: true });
+  });
+
+  test('a/b shows the other format', () => {
+    const ab = keys.find((k) => k.face === 'a/b');
+    expect(resolveKey(ab, null, 'dec').face).toBe('a/b');
+    expect(resolveKey(ab, null, 'frac').face).toBe('0.5');
+  });
+});
+
 describe('deleteLast', () => {
-  const { deleteLast } = require('@/features/calculator/math/keys');
+  const { deleteLast, tokenBefore, tokenAfter } = require('@/features/calculator/math/keys');
+  test('cursor steps over whole key presses', () => {
+    expect(tokenBefore('2+sin(')).toBe(4);
+    expect(tokenBefore('2+3')).toBe(1);
+    expect(tokenBefore('')).toBe(0);
+    expect(tokenAfter('sin⁻¹(30)')).toBe(6);
+    expect(tokenAfter('d/dx(x²,2)')).toBe(5);
+    expect(tokenAfter('')).toBe(0);
+  });
+
   test('removes whole function tokens', () => {
     expect(deleteLast('2+sin(')).toBe('2+');
     expect(deleteLast('sin⁻¹(')).toBe('');
     expect(deleteLast('log_b(')).toBe('');
+    expect(deleteLast('∫(')).toBe('');
+    expect(deleteLast('2+d/dx(')).toBe('2+');
+    expect(deleteLast('∫(x')).toBe('∫(');
     expect(deleteLast('12')).toBe('1');
     expect(deleteLast('')).toBe('');
   });

@@ -45,3 +45,19 @@ export function asOperand(v) {
   const s = formatNumber(v, 'dec');
   return /^\d+(\.\d+)?$/.test(s) ? s : '(' + s + ')';
 }
+
+// Text ending like this starts a new operand, so a number can follow it as is.
+const OPEN_END = /[(,+−\-×÷^]$/;
+
+/**
+ * v as text to put in place of text[start, end) (Ans, RCL, Rand, a stored
+ * variable), bracketed when it would merge with its neighbours: 2 then Ans
+ * gives 2(79), not 279; 3² then Ans gives 3²(79), not 3^279.
+ */
+export function operandIn(text, start, end, v) {
+  const s = asOperand(v);
+  if (s.startsWith('(')) return s;
+  const before = text.slice(0, start);
+  const merges = (before !== '' && !OPEN_END.test(before)) || /^[\d.]/.test(text.slice(end));
+  return merges ? '(' + s + ')' : s;
+}
