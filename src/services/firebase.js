@@ -1,4 +1,4 @@
-// Firebase app, Auth and Firestore (JS SDK). Config comes from .env (EXPO_PUBLIC_*).
+// Firebase app, Auth, Firestore and Functions (JS SDK). Config comes from .env (EXPO_PUBLIC_*).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import { getReactNativePersistence, initializeAuth } from 'firebase/auth';

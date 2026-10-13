@@ -1,4 +1,4 @@
-// Settings screen (prototype "CalcMaster Menu" settings view).
+// Settings screen: account, angle unit, output format, appearance.
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

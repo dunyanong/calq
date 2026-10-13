@@ -8,7 +8,7 @@ import { BOX, boxLabel } from '@/features/calculator/math/entry';
 
 // Memoised: the entry changes on every key press, the cards do not.
 const HistoryCard = memo(function HistoryCard({ item, t, held, onHold, onRecall }) {
-  // prototype calqRow: fade + slide up when a card appears
+  // fade + slide up when a card appears
   const [anim] = useState(() => new Animated.Value(0));
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
@@ -85,7 +85,8 @@ function Shake({ trigger, children }) {
  * @param {string} p.entry         current input
  * @param {number} p.cursor        caret position in entry
  * @param {string|null} p.preview  value of the entry so far, shown dimmed
- * @param {string|null} p.hint     what the box under the cursor is for (replaces the preview)
+ * @param {string|null} p.hint     replaces the preview: what the box under the cursor is for,
+ *                                 the variable values (ALPHA / STO / RCL) or "Finding a formula…"
  * @param {number} p.shake         changes on a bad expression
  * @param {'deg'|'rad'|'grad'} p.angle  unit for the next calculation
  * @param {() => void} p.onAnglePress  the badge was tapped (opens the angle unit picker)
