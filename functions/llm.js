@@ -9,11 +9,11 @@ import { logger } from 'firebase-functions';
  * @param {string} p.apiKey
  * @param {string} p.model
  * @param {object[]} p.messages
- * @param {number} [p.maxTokens]
- * @param {number} [p.temperature]
+ * @param {number} p.maxTokens
+ * @param {number} p.temperature
  * @returns {Promise<object>} the JSON object the model replied with
  */
-export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 800, temperature = 0 }) {
+export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens, temperature }) {
   let res;
   try {
     res = await fetch(baseUrl.replace(/\/+$/, '') + '/chat/completions', {
@@ -41,7 +41,7 @@ export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 8
 }
 
 /** Pulls the first {...} object out of a reply that may have ``` fences or extra words. */
-export function parseJsonObject(text) {
+function parseJsonObject(text) {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) return null;
