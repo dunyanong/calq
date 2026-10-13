@@ -1,17 +1,6 @@
 // Smoke test: renders the real screens and presses some keys.
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
-jest.mock('expo-crypto', () => {
-  let n = 0;
-  return { randomUUID: () => 'id-' + ++n };
-});
-// Fonts are not needed to test behaviour.
-jest.mock('expo-font', () => ({ useFonts: () => [true], loadAsync: jest.fn() }));
-
 // Each test starts from a fresh install (an angle unit picked in one test must not leak into the next).
 beforeEach(() => require('@react-native-async-storage/async-storage').clear());
 
@@ -116,7 +105,7 @@ test('∫ without limits needs sign-in (the formula comes from the AI)', async (
 test('x outside ∫, d/dx or Σ explains itself', async () => {
   await renderApp();
   for (const k of ['2', 'x', '=']) press(k);
-  expect(screen.getByText('Use x inside ∫, d/dx or Σ')).toBeTruthy();
+  expect(screen.getByText('Use x inside ∫, d/dx, Σ or Π')).toBeTruthy();
 });
 
 test('brackets and % are on the numeric page', async () => {

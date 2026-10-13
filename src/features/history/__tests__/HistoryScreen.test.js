@@ -3,18 +3,6 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
-jest.mock('expo-crypto', () => {
-  let n = 0;
-  return { randomUUID: () => 'id-' + ++n };
-});
-jest.mock('expo-font', () => ({ useFonts: () => [true], loadAsync: jest.fn() }));
-jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: {} }));
-jest.mock('expo-sharing', () => ({}));
-
 const press = (label) => fireEvent.press(screen.getAllByText(label).at(-1));
 
 async function render(url = '/') {

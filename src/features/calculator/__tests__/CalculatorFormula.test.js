@@ -1,15 +1,6 @@
 // ∫ without limits for a signed-in user: the AI's answer is checked before it is shown.
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
-jest.mock('expo-crypto', () => {
-  let n = 0;
-  return { randomUUID: () => 'id-' + ++n };
-});
-jest.mock('expo-font', () => ({ useFonts: () => [true], loadAsync: jest.fn() }));
 // signed in, with cloud history stubbed out
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
