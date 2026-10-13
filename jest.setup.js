@@ -50,3 +50,5 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('firebase/firestore', () => ({}));
 jest.mock('expo-print', () => ({ printToFileAsync: jest.fn() }));
+// setOptions only works in native builds; the JS stub warns on every render
+jest.mock('expo-splash-screen', () => ({ ...jest.requireActual('expo-splash-screen'), setOptions: jest.fn() }));

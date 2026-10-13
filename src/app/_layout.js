@@ -13,6 +13,7 @@ import { DrawerProvider } from '@/components/Drawer';
 import { ExportProvider } from '@/features/export/ExportContext';
 
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ duration: 300, fade: true }); // dissolve into the app, not cut
 
 function AppShell() {
   const { theme, ready: settingsReady } = useSettings();
