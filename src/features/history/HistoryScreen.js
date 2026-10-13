@@ -10,12 +10,13 @@ import AngleBadge from '@/components/AngleBadge';
 import ScreenHeader from '@/components/ScreenHeader';
 import { CopyIcon, ExportIcon, PinIcon, TrashIcon } from '@/components/Icons';
 import { useToast } from '@/components/Toast';
-import { ExportRow } from '@/features/calculator/components/HoldPanel';
+import { useExport } from '@/features/export/ExportContext';
+import ExportRow from '@/features/export/ExportRow';
 import { useSettings } from '@/features/settings/SettingsContext';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
 import { useHistory } from './HistoryContext';
-import { formatDate, shareExport } from './exportHistory';
+import { formatDate } from './exportHistory';
 
 function IconButton({ onPress, label, children }) {
   return (
@@ -70,6 +71,7 @@ export default function HistoryScreen() {
   const { theme: t } = useSettings();
   const history = useHistory();
   const toast = useToast();
+  const exporter = useExport();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { filter } = useLocalSearchParams();
@@ -110,7 +112,7 @@ export default function HistoryScreen() {
 
   const onExport = (format) => {
     setExportOpen(false);
-    shareExport(matching, format).catch((e) => toast(e.message || 'Export failed'));
+    exporter.run(matching, format);
   };
 
   return (
@@ -136,7 +138,7 @@ export default function HistoryScreen() {
       )}
       {exportOpen && items.length > 0 && (
         <View style={[styles.exportWrap, { backgroundColor: t.card, borderColor: t.divider }]}>
-          <ExportRow onExport={onExport} />
+          <ExportRow onExport={onExport} t={t} />
         </View>
       )}
 
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
   count: { flex: 1, fontFamily: F.bodySemi, fontSize: 14 },
   toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   toolText: { fontFamily: F.bodyBold, fontSize: 14.5 },
-  exportWrap: { marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, paddingVertical: 4 },
+  exportWrap: { marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 8 },
   list: { padding: 16, gap: 10 },
   row: {
     flexDirection: 'row',

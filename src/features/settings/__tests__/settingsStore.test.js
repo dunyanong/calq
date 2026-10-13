@@ -20,3 +20,17 @@ test.each(['turn', null, 7])('an unknown angle unit (%p) falls back to degrees',
   expect(s.angle).toBe('deg');
   expect(s.output).toBe('frac'); // the rest is kept
 });
+
+test('export settings: unknown or malformed values fall back to the defaults', async () => {
+  await saved({ exportTo: 'ftp', aiNotes: 'yes', drive: { uid: 'u1' } });
+  const s = await loadSettings();
+  expect(s.exportTo).toBe('share');
+  expect(s.aiNotes).toBe(false);
+  expect(s.drive).toBeNull();
+});
+
+test('a connected Drive and the AI notes switch are kept', async () => {
+  const drive = { uid: 'u1', email: 'a@example.com', folderId: 'f1', folderName: 'Calq' };
+  await saved({ exportTo: 'drive', aiNotes: true, drive });
+  expect(await loadSettings()).toMatchObject({ exportTo: 'drive', aiNotes: true, drive });
+});

@@ -17,7 +17,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
 import { DEFAULT_SETTINGS } from '@/features/settings/settingsStore';
 import { useHistory } from '@/features/history/HistoryContext';
-import { shareExport } from '@/features/history/exportHistory';
+import { useExport } from '@/features/export/ExportContext';
 import { integrateFormula } from '@/services/ai';
 import { closeParens, evaluate, freezeRandom, hasCalculus, hasTrig } from './math/engine';
 import { BOX, boxHint, closeBox, completeEntry, deleteBefore, freezeVars, insertAt, moveCursor as move, templateText } from './math/entry';
@@ -42,6 +42,7 @@ export default function Calculator() {
   const history = useHistory();
   const { user } = useAuth();
   const toast = useToast();
+  const exporter = useExport();
   const router = useRouter();
   const { recall } = useLocalSearchParams(); // a calculation picked on the History screen
   const insets = useSafeAreaInsets();
@@ -404,7 +405,7 @@ export default function Calculator() {
         onExport={(format) => {
           const item = heldItem;
           closeHold();
-          shareExport([item], format).catch((e) => toast(e.message || 'Export failed'));
+          exporter.run([item], format); // AI notes / Drive per Settings and the export row
         }}
       />
     </View>

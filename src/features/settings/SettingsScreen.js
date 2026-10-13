@@ -1,17 +1,20 @@
-// Settings screen: account, angle unit, output format, appearance.
-import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+// Settings screen: account, angle unit, output format, appearance, export (AI study notes, Google Drive).
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import ScreenHeader from '@/components/ScreenHeader';
 import { ANGLE_MODES, ANGLE_UNITS } from '@/components/AngleBadge';
 import Segmented from '@/components/Segmented';
 import Switch from '@/components/Switch';
-import { GoogleG } from '@/components/Icons';
+import { DriveIcon, GoogleG, SparkleIcon } from '@/components/Icons';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
+import DriveFolderPicker from '@/features/export/DriveFolderPicker';
+import * as Drive from '@/services/drive';
 import { useSettings } from './SettingsContext';
 import { F } from '@/theme/fonts';
+import { BLUE } from '@/theme/tokens';
 
 function Section({ title, t }) {
   return <Text style={[styles.section, { color: t.sub }]}>{title}</Text>;
@@ -21,8 +24,138 @@ function Card({ t, children, style }) {
   return <View style={[styles.card, { backgroundColor: t.card, borderColor: t.divider }, style]}>{children}</View>;
 }
 
+/**
+ * Google Drive: connect (asks Google for drive.file access), the folder exports go
+ * to, and disconnect. Tokens stay with Google Sign-In; only the folder is saved.
+ */
+function DriveCard({ t, user }) {
+  const { drive: saved, update } = useSettings();
+  const toast = useToast();
+  const drive = user && saved?.uid === user.uid ? saved : null;
+  const [busy, setBusy] = useState(false);
+  const [lost, setLost] = useState(false); // Google no longer gives Calq Drive access
+  const [picker, setPicker] = useState({ open: false, session: 0 });
+
+  // Access can be removed outside Calq (Google account settings) or on sign-out.
+  const email = drive ? user.email : null;
+  useEffect(() => {
+    if (!email) return undefined;
+    let cancelled = false;
+    Drive.isConnected(email)
+      .then((ok) => !cancelled && setLost(!ok))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
+
+  const connect = async () => {
+    setBusy(true);
+    try {
+      await Drive.connect(user.email);
+      // a reconnect keeps the folder; a first connect makes (or finds) "Calq"
+      const folder = await Drive.ensureFolder(drive ? { id: drive.folderId, name: drive.folderName } : { name: Drive.DEFAULT_FOLDER });
+      update({ drive: { uid: user.uid, email: user.email, folderId: folder.id, folderName: folder.name }, exportTo: 'drive' });
+      setLost(false);
+      toast('Google Drive connected · exports go to ' + folder.name);
+    } catch (e) {
+      toast(e.message || 'Google Drive was not connected');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disconnect = () =>
+    Alert.alert('Disconnect Google Drive?', 'Calq will stop saving to your Drive. Files it already saved stay there.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Disconnect',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            await Drive.disconnect();
+            update({ drive: null, exportTo: 'share' });
+            toast('Google Drive disconnected');
+          } catch (e) {
+            toast('Could not disconnect: ' + (e.message || 'try again'));
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
+
+  const choose = (folder) => {
+    setPicker((p) => ({ ...p, open: false }));
+    update({ drive: { ...drive, folderId: folder.id, folderName: folder.name } });
+    toast('Exports go to ' + folder.name);
+  };
+
+  const status = !user
+    ? 'Sign in with Google to save exports to your Drive'
+    : !drive
+      ? 'Save exports straight to a folder in your Drive. Calq can only see the files it makes.'
+      : lost
+        ? 'Reconnect needed: Calq no longer has access'
+        : 'Connected · ' + drive.email;
+
+  return (
+    <Card t={t}>
+      <View style={[styles.pad, styles.driveHead]}>
+        <DriveIcon color={t.text} size={20} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.rowTitle, { color: t.text }]}>Google Drive</Text>
+          <Text style={[styles.rowSub, { color: lost ? '#c0564b' : t.sub }]}>{status}</Text>
+        </View>
+      </View>
+      {drive && !lost && (
+        <Pressable
+          onPress={() => setPicker((p) => ({ open: true, session: p.session + 1 }))}
+          accessibilityRole="button"
+          accessibilityLabel={'Drive folder: ' + drive.folderName}
+          style={({ pressed }) => [styles.switchRow, styles.ruled, { borderTopColor: t.divider, opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Text style={[styles.rowTitle, { color: t.text, flex: 1 }]}>Folder</Text>
+          <Text style={[styles.rowValue, { color: t.accentText }]} numberOfLines={1}>
+            {drive.folderName} ›
+          </Text>
+        </Pressable>
+      )}
+      <View style={[styles.driveActions, { borderTopColor: t.divider }]}>
+        {busy ? (
+          <ActivityIndicator color={t.sub} />
+        ) : (
+          <>
+            {(!drive || lost) && (
+              <Pressable onPress={connect} disabled={!user} accessibilityRole="button" style={({ pressed }) => [styles.driveBtn, { opacity: !user ? 0.4 : pressed ? 0.6 : 1 }]}>
+                <Text style={styles.driveBtnText}>{lost ? 'Reconnect Google Drive' : 'Connect Google Drive'}</Text>
+              </Pressable>
+            )}
+            {drive && (
+              <Pressable onPress={disconnect} accessibilityRole="button" style={({ pressed }) => [styles.driveBtn, { opacity: pressed ? 0.6 : 1 }]}>
+                <Text style={[styles.driveBtnText, { color: '#c0564b' }]}>Disconnect</Text>
+              </Pressable>
+            )}
+          </>
+        )}
+      </View>
+      {drive && (
+        <DriveFolderPicker
+          visible={picker.open}
+          session={picker.session}
+          current={{ id: drive.folderId, name: drive.folderName }}
+          t={t}
+          onClose={() => setPicker((p) => ({ ...p, open: false }))}
+          onChoose={choose}
+        />
+      )}
+    </Card>
+  );
+}
+
 export default function Settings() {
-  const { theme: t, angle, output, dark, update } = useSettings();
+  const { theme: t, angle, output, dark, aiNotes, update } = useSettings();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user, signIn, signOut } = useAuth();
@@ -108,6 +241,31 @@ export default function Settings() {
           </Pressable>
         </Card>
 
+        <Section title="EXPORT" t={t} />
+        <Card t={t}>
+          <Pressable
+            onPress={() => (user ? update({ aiNotes: !aiNotes }) : toast('Sign in to use AI study notes'))}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: !!user && aiNotes, disabled: !user }}
+            style={[styles.switchRow, !user && { opacity: 0.5 }]}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={styles.aiTitle}>
+                <SparkleIcon color={BLUE} size={13} />
+                <Text style={[styles.rowTitle, { color: t.text }]}>AI study notes</Text>
+              </View>
+              <Text style={[styles.rowSub, { color: t.sub }]}>
+                {user
+                  ? 'PDF, LaTeX and Markdown exports become study notes with explanations and checked workings. Calculations are sent to the AI service.'
+                  : 'Sign in to use AI study notes'}
+              </Text>
+            </View>
+            <Switch on={!!user && aiNotes} trackOn={t.accent} trackOff={t.switchTrack} />
+          </Pressable>
+        </Card>
+        <View style={styles.gap} />
+        <DriveCard t={t} user={user} />
+
         <Pressable
           onPress={onAccountPress}
           disabled={busy}
@@ -140,6 +298,14 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontFamily: F.bodySemi },
   rowSub: { fontSize: 13, fontFamily: F.body, marginTop: 2 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, paddingHorizontal: 16 },
+  aiTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  gap: { height: 12 },
+  driveHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  ruled: { borderTopWidth: 1 },
+  rowValue: { fontSize: 15, fontFamily: F.bodyBold, maxWidth: '60%' },
+  driveActions: { flexDirection: 'row', justifyContent: 'center', gap: 10, borderTopWidth: 1, paddingVertical: 10, minHeight: 50, alignItems: 'center' },
+  driveBtn: { paddingVertical: 6, paddingHorizontal: 12 },
+  driveBtnText: { fontSize: 15, fontFamily: F.bodyBold, color: BLUE },
   google: {
     marginTop: 26,
     flexDirection: 'row',

@@ -2,7 +2,7 @@
 
 Scientific calculator for Android and iOS: Expo SDK 55 (React Native 0.83), JavaScript, math.js, Firebase (Google sign-in, Firestore, Cloud Functions).
 
-Guests keep history on the device. Signing in with Google syncs history across devices and unlocks the AI features.
+Guests keep history on the device. Signing in with Google syncs history across devices and unlocks the AI features and saving exports to Google Drive.
 
 ## Requirements
 
@@ -112,8 +112,11 @@ Signed-in users only. The Cloud Functions in `functions/` call open-weights Qwen
 | Scan | camera key on the keypad | `scanEquation` (vision) | User reviews and edits the text, which then replaces the entry |
 | Steps | hold a calculation with 2+ operations or big numbers (489×73) | `explainSteps` | math.js recomputes every step (`math/aiSteps.js`); a failing plan shows "Couldn't explain this one" + Retry |
 | ∫ formulas | ∫ with both limits empty: ∫(x², □, □) | `integrateFormula` | F′ must equal f at sample points (`math/symbolic.js`); one retry, then an error |
+| Study notes | Settings → AI study notes, then export Markdown, LaTeX or PDF | `studyNotes` (+ `explainSteps` for the workings) | Workings are checked like Steps. A sentence is dropped if it has a number that isn't in its calculation, or claims a value (`sin(30)=0.5`, "`3!` is 6") that math.js disagrees with (`features/export/studyNotes.js`). The app writes all the Markdown / LaTeX / HTML |
 
 d/dx with the point left empty needs no AI: math.js differentiates on the device. Simple sums (5+3) and ∫, d/dx, Σ, Π calculations show no steps.
+
+Study notes cover the 20 most recent calculations of an export and end with the plain table of all of them. If the notes fail, the toast offers **Export plain**. CSV and Text, and every format with the switch off, export exactly as before.
 
 Setup (once per Firebase project):
 
@@ -132,7 +135,7 @@ Setup (once per Firebase project):
    cd functions && npm install && cd ..
    npx firebase deploy --only functions
    ```
-   The first deploy asks for the params below (Enter keeps the default) and saves them to `functions/.env.<project-id>` (git-ignored). A deploy without a terminal (script, CI) can't ask, so that file must exist first.
+   The first deploy asks for the params below (Enter keeps the default) and saves them to `functions/.env.<project-id>` (git-ignored). A deploy without a terminal (script, CI) can't ask, so that file must exist first and list every param, including ones added later (e.g. `NOTES_PER_DAY=20`).
 
 | Param | Default | Notes |
 |---|---|---|
@@ -140,5 +143,21 @@ Setup (once per Firebase project):
 | `OCR_MODEL` | `qwen/qwen3-vl-235b-a22b-instruct` | Must accept images |
 | `STEPS_MODEL` | `qwen/qwen3-235b-a22b-2507` | Steps and ∫ formulas |
 | `SCANS_PER_DAY` / `STEPS_PER_DAY` / `INTEGRALS_PER_DAY` | `30` / `200` / `50` | Per user, counted in `usage/{uid}`, reset at 00:00 UTC |
+| `NOTES_PER_DAY` | `20` | Study-notes exports per user per day (each makes up to 5 model calls; its workings count as Steps) |
 
 Logs: `npx firebase functions:log`. Prompts: `functions/prompts.js`.
+
+## Google Drive
+
+Signed-in users can connect Google Drive in Settings → Google Drive. Exports then go to a Drive folder instead of the share sheet: the **Send to** switch above the export buttons picks Share or Drive, and Settings → Google Drive → Folder picks the folder (My Drive, a folder Calq made, or a new one).
+
+- Calq asks for the `drive.file` scope only, through the Google sign-in it already uses, and only when the user taps Connect. With it, Calq can see and change only the files and folders it creates.
+- Access tokens come from Google Sign-In for each upload. Calq never stores them and never sends them to its server. Settings keep only the folder.
+- Disconnect revokes Calq's Google access. Files already saved stay in Drive, and the user stays signed in to Calq.
+
+Setup (once per Firebase project, in the Google Cloud console of the same project):
+
+1. APIs & Services → Library → **Google Drive API** → Enable. Without it, uploads fail with "Google Drive is not set up for Calq yet".
+2. Google Auth Platform (OAuth consent screen) → Data access → Add or remove scopes → add `.../auth/drive.file` → Save. While the app's publishing status is Testing, only the test users listed under Audience can connect.
+
+Drive needs no new native module, so there's no prebuild. Code: `src/services/drive.js`.

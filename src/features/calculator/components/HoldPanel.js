@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { angleMode } from '@/components/AngleBadge';
 import Popup from '@/components/Popup';
-import { CopyIcon, CsvIcon, DuplicateIcon, ExportIcon, LatexIcon, MarkdownIcon, PdfIcon, PinIcon, TextIcon } from '@/components/Icons';
+import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon } from '@/components/Icons';
 import { useAuth } from '@/features/auth/AuthContext';
-import { stepsFromPlan } from '@/features/calculator/math/aiSteps';
-import { hasCalculus } from '@/features/calculator/math/engine';
+import { needsSteps, stepsFromPlan } from '@/features/calculator/math/aiSteps';
+import ExportRow from '@/features/export/ExportRow';
 import { explainSteps } from '@/services/ai';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -35,35 +35,6 @@ function Action({ label, color, dim, onPress, children }) {
     </Pressable>
   );
 }
-
-const EXPORT_FORMATS = [
-  { key: 'csv', label: 'CSV', color: '#3d9c8b', Icon: CsvIcon },
-  { key: 'text', label: 'Text', color: BLUE, Icon: TextIcon },
-  { key: 'markdown', label: 'Markdown', color: '#727d8b', Icon: MarkdownIcon },
-  { key: 'latex', label: 'LaTeX', color: '#7a5cc4', Icon: LatexIcon },
-  { key: 'pdf', label: 'PDF', color: '#d0473f', Icon: PdfIcon },
-];
-
-/** Row of export format buttons. */
-export function ExportRow({ onExport }) {
-  return (
-    <View style={styles.exportRow}>
-      {EXPORT_FORMATS.map(({ key, label, color, Icon }) => (
-        <Pressable key={key} onPress={() => onExport(key)} style={({ pressed }) => [styles.exportBtn, { opacity: pressed ? 0.6 : 1 }]}>
-          <Icon color={color} />
-          <Text style={[styles.exportText, { color }]}>{label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-// Steps are shown when there is more than one operation to explain,
-// or hard arithmetic such as 489×73 or 7488÷24. "5+3" just shows its result.
-// ∫, d/dx, Σ and Π get no steps: aiSteps cannot check workings for them.
-const needsSteps = (expr) =>
-  !hasCalculus(expr) &&
-  ((expr.match(/[+−×÷^!²³⁻√∛(]/g) || []).length >= 2 || /\d{2,}[×÷]\d{2,}/.test(expr));
 
 /**
  * Loads the steps when the panel opens: the AI plans the order and writes the
@@ -166,7 +137,7 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
       </View>
       {exportOpen && (
         <View style={styles.exportWrap}>
-          <ExportRow onExport={onExport} />
+          <ExportRow onExport={onExport} t={t} />
         </View>
       )}
     </>
@@ -206,7 +177,4 @@ const styles = StyleSheet.create({
   action: { alignItems: 'center', gap: 4, width: 64 },
   actionText: { fontFamily: F.label, fontSize: 10 },
   exportWrap: { marginTop: 11, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(29,38,48,.1)' },
-  exportRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  exportBtn: { alignItems: 'center', gap: 4, width: 56 }, // five fit the 308px panel
-  exportText: { fontFamily: F.labelBold, fontSize: 10 },
 });

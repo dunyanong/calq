@@ -12,7 +12,15 @@ export const DEFAULT_SETTINGS = {
   vars: { A: 0, B: 0, C: 0, D: 0, F: 0, M: 0 },
   // New session (+ in the calculator header): the calculator shows calculations from this time on
   sessionStart: 0,
+  // Export: Markdown / LaTeX / PDF as AI study notes (signed in only), and where exports go
+  aiNotes: false,
+  exportTo: 'share', // 'share' | 'drive'
+  // Google Drive connected for one Calq user: { uid, email, folderId, folderName }. No tokens:
+  // Google Sign-In keeps those (services/drive.js).
+  drive: null,
 };
+
+const EXPORT_TO = ['share', 'drive'];
 
 export async function loadSettings() {
   try {
@@ -22,6 +30,9 @@ export async function loadSettings() {
     const settings = { ...DEFAULT_SETTINGS, ...saved, vars: { ...DEFAULT_SETTINGS.vars, ...saved.vars } };
     // an unknown unit (corrupt or from a newer build) would be read as radians by the engine
     if (!ANGLE_UNITS.includes(settings.angle)) settings.angle = DEFAULT_SETTINGS.angle;
+    if (!EXPORT_TO.includes(settings.exportTo)) settings.exportTo = DEFAULT_SETTINGS.exportTo;
+    if (typeof settings.drive?.uid !== 'string' || typeof settings.drive.folderId !== 'string') settings.drive = null;
+    settings.aiNotes = settings.aiNotes === true;
     return settings;
   } catch {
     return DEFAULT_SETTINGS;
