@@ -22,6 +22,11 @@ function reducer(items, action) {
       return items.map((it) => (it.id === action.id ? { ...it, ...action.patch } : it));
     case 'remove':
       return items.filter((it) => it.id !== action.id);
+    case 'restore': {
+      // Undo: put deleted items back in their place (they keep their ids and dates)
+      const back = action.items.filter((r) => !items.some((it) => it.id === r.id));
+      return items.concat(back).sort((a, b) => a.createdAt - b.createdAt);
+    }
     case 'clear':
       return [];
     default:
@@ -119,6 +124,11 @@ export function HistoryProvider({ children }) {
       clear: () => {
         dispatch({ type: 'clear' });
         if (uid) cloud.clearAll(uid).catch(warn('clear'));
+      },
+      // Undo for remove / clear. Same ids, so the cloud copy is never duplicated.
+      restore: (deleted) => {
+        dispatch({ type: 'restore', items: deleted });
+        if (uid) cloud.mergeLocal(uid, deleted).catch(warn('restore'));
       },
     };
   }, [items, ready, uid]);

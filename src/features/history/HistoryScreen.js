@@ -1,10 +1,12 @@
 // History screen: all calculations (Recent) or pinned ones (Starred, ?filter=pinned).
-// Pin / copy / delete per row; Export and Clear for the whole list.
+// Tap a row to edit it again on the calculator; pin / copy / delete per row (delete
+// and Clear can be undone); Export for the whole list.
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
+import AngleBadge from '@/components/AngleBadge';
 import ScreenHeader from '@/components/ScreenHeader';
 import { CopyIcon, ExportIcon, PinIcon, TrashIcon } from '@/components/Icons';
 import { useToast } from '@/components/Toast';
@@ -28,7 +30,7 @@ function IconButton({ onPress, label, children }) {
   );
 }
 
-function Row({ item, t, onPin, onCopy, onDelete }) {
+function Row({ item, t, onOpen, onPin, onCopy, onDelete }) {
   return (
     <View
       style={[
@@ -36,13 +38,21 @@ function Row({ item, t, onPin, onCopy, onDelete }) {
         { backgroundColor: item.pinned ? t.pinnedRowBg : t.card, borderColor: t.divider },
       ]}
     >
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[styles.expr, { color: t.sub }]}>{item.expr}</Text>
+      <Pressable
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityHint="Opens it on the calculator to edit"
+        style={({ pressed }) => [{ flex: 1, minWidth: 0 }, pressed && { opacity: 0.6 }]}
+      >
+        <View style={styles.head}>
+          <AngleBadge angle={item.angle} t={t} />
+          <Text style={[styles.expr, { color: t.sub }]}>{item.expr}</Text>
+        </View>
         <Text style={[styles.result, { color: t.text }]}>= {item.result}</Text>
         <Text style={[styles.meta, { color: t.sub }]}>
-          {item.angle === 'rad' ? 'RAD' : 'DEG'} · {formatDate(item.createdAt)}
+          {formatDate(item.createdAt)}
         </Text>
-      </View>
+      </Pressable>
       <IconButton onPress={onPin} label={item.pinned ? 'Unpin' : 'Pin'}>
         <PinIcon color={item.pinned ? BLUE : t.sub} filled={item.pinned} />
       </IconButton>
@@ -61,6 +71,7 @@ export default function HistoryScreen() {
   const history = useHistory();
   const toast = useToast();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { filter } = useLocalSearchParams();
   const starred = filter === 'pinned';
   const [exportOpen, setExportOpen] = useState(false);
@@ -73,11 +84,29 @@ export default function HistoryScreen() {
     toast('Copied');
   };
 
+  const undo = (deleted) => ({ label: 'Undo', onPress: () => history.restore(deleted) });
+
+  const remove = (item) => {
+    history.remove(item.id);
+    toast('Deleted', { action: undo([item]) });
+  };
+
   const confirmClear = () =>
     Alert.alert('Clear all history?', 'This deletes every calculation, including pinned ones.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: history.clear },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: () => {
+          const all = history.items;
+          history.clear();
+          toast('History cleared', { action: undo(all) });
+        },
+      },
     ]);
+
+  // back to the calculator (the one already open, see Drawer) with this calculation in the entry
+  const open = (item) => router.dismissTo({ pathname: '/', params: { recall: item.id } });
 
   const onExport = (format) => {
     setExportOpen(false);
@@ -119,9 +148,10 @@ export default function HistoryScreen() {
           <Row
             item={item}
             t={t}
+            onOpen={() => open(item)}
             onPin={() => history.togglePin(item.id)}
             onCopy={() => copy(item.result)}
-            onDelete={() => history.remove(item.id)}
+            onDelete={() => remove(item)}
           />
         )}
         ListEmptyComponent={
@@ -157,7 +187,9 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 8,
   },
-  expr: { fontFamily: F.mono, fontSize: 14 },
+  // badge pinned top-left, expression top-right
+  head: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  expr: { fontFamily: F.mono, fontSize: 14, textAlign: 'right', flexShrink: 1 },
   result: { fontFamily: F.monoBold, fontSize: 19, marginTop: 2 },
   meta: { fontFamily: F.label, fontSize: 11.5, marginTop: 4, letterSpacing: 0.3 },
   iconBtn: { padding: 8 },
