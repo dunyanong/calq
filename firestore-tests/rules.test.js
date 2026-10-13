@@ -86,9 +86,12 @@ describe('field validation', () => {
   test('expression over 200 characters', () => rejects(item({ expr: '1'.repeat(201) })));
   test('empty expression', () => rejects(item({ expr: '' })));
   test('result over 200 characters', () => rejects(item({ result: '9'.repeat(201) })));
-  test('unknown angle unit', () => rejects(item({ angle: 'grad' })));
+  test('unknown angle unit', () => rejects(item({ angle: 'turn' })));
   test('pinned not a boolean', () => rejects(item({ pinned: 'yes' })));
   test('timestamps not integers', () => rejects(item({ createdAt: 'today' })));
+
+  test('gradian angle unit is allowed', () =>
+    assertSucceeds(setDoc(itemRef(db('alice'), 'alice', 'calc-grad'), item({ angle: 'grad' }))));
 
   test('200-character expression is allowed', () =>
     assertSucceeds(setDoc(itemRef(db('alice'), 'alice', 'calc-new'), item({ expr: '1'.repeat(200) }))));

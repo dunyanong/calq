@@ -34,7 +34,7 @@ Rules:
 Reply with JSON only: {"expr": "<expression or empty>", "note": "<max 10 words if anything was unclear, else empty>"}`;
 
 export const STEPS_PROMPT = `You explain, step by step, how a scientific calculator evaluates an expression, for a student.
-You get an expression in calculator notation and the angle mode (deg or rad).
+You get an expression in calculator notation and the angle mode (deg, rad or grad).
 
 ${SYNTAX}
 
@@ -70,7 +70,7 @@ Example — expression: 489×73+12, angle: deg
 Reply with JSON only: {"steps":[{"parts":["..."],"note":"..."} or {"rewrite":"...","note":"..."}]}`;
 
 export const INTEGRAL_PROMPT = `You find antiderivatives for a scientific calculator app.
-You get f(x) in calculator notation and the angle mode (deg or rad). Give F(x) with F′(x) = f(x).
+You get f(x) in calculator notation and the angle mode (deg, rad or grad). Give F(x) with F′(x) = f(x).
 
 ${SYNTAX}
 Here x is the variable and may appear anywhere in F.
@@ -80,7 +80,8 @@ Rules:
 - Write × between factors, except a number before x or a function: 3x², 2sin(x), x×e^(x).
 - Prefer the simplest standard form, e.g. ln(abs(x)) for 1÷x.
 - Angle mode deg: sin cos tan take degrees and sin⁻¹ cos⁻¹ tan⁻¹ return degrees, so the chain rule brings in
-  180÷π, e.g. f = sin(x) → F = −(180÷π)×cos(x). In rad mode as usual: F = −cos(x).
+  180÷π, e.g. f = sin(x) → F = −(180÷π)×cos(x). Angle mode grad works the same with gradians (400 to a turn),
+  so the factor is 200÷π, e.g. f = sin(x) → F = −(200÷π)×cos(x). In rad mode as usual: F = −cos(x).
 - If F has no elementary formula (e^(−x²), sin(x)÷x, √(sin(x)) …) return an empty F. Never guess.
 - The app checks F′ = f numerically and rejects wrong answers.
 

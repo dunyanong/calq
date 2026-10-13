@@ -38,7 +38,7 @@ const planCache = new Map();
 
 /**
  * @param {string} expr
- * @param {'deg'|'rad'} angle
+ * @param {'deg'|'rad'|'grad'} angle
  * @param {{retry?: boolean}} [opts]  retry: skip the cache and ask for a different plan
  * @returns {Promise<{parts?: string[], rewrite?: string, note: string}[]>}
  */
@@ -57,7 +57,7 @@ const integralCache = new Map();
  * Antiderivative for ∫ without limits. The answer is unchecked here:
  * math/symbolic.js accepts it only if F′ = f.
  * @param {string} f  integrand in calculator notation
- * @param {'deg'|'rad'} angle
+ * @param {'deg'|'rad'|'grad'} angle
  * @param {{retry?: boolean}} [opts]  retry: the last answer was wrong, ask for another one
  * @returns {Promise<string>} F, or '' when the model says there is no formula
  */
