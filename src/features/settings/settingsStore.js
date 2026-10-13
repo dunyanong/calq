@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ANGLE_UNITS } from '@/components/AngleBadge';
 
 const KEY = 'calq.settings';
 
 export const DEFAULT_SETTINGS = {
-  angle: 'deg', // 'deg' | 'rad'
+  angle: 'deg', // 'deg' | 'rad' | 'grad'
   output: 'dec', // 'dec' | 'frac'
   dark: false,
   // calculator memory, kept here so it survives a restart like on a Casio
@@ -18,7 +19,10 @@ export async function loadSettings() {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const saved = JSON.parse(raw);
-    return { ...DEFAULT_SETTINGS, ...saved, vars: { ...DEFAULT_SETTINGS.vars, ...saved.vars } };
+    const settings = { ...DEFAULT_SETTINGS, ...saved, vars: { ...DEFAULT_SETTINGS.vars, ...saved.vars } };
+    // an unknown unit (corrupt or from a newer build) would be read as radians by the engine
+    if (!ANGLE_UNITS.includes(settings.angle)) settings.angle = DEFAULT_SETTINGS.angle;
+    return settings;
   } catch {
     return DEFAULT_SETTINGS;
   }
