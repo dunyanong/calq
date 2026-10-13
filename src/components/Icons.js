@@ -185,6 +185,25 @@ export function PlusIcon({ size = 24, color }) {
   );
 }
 
+// Export: Google Drive (outline of its triangle) and the sparkle marking AI study notes.
+export function DriveIcon({ size = 18, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M7 3 H13 L18.5 12.5 L15.5 17.5 H4.5 L1.5 12.5 Z" />
+      <Path d="M7 3 L12.5 12.5 H18.5" />
+      <Path d="M4.5 17.5 L10 8" />
+    </Svg>
+  );
+}
+
+export function SparkleIcon({ size = 12, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20">
+      <Path d="M10 1.5 C10.7 6.6 13.4 9.3 18.5 10 C13.4 10.7 10.7 13.4 10 18.5 C9.3 13.4 6.6 10.7 1.5 10 C6.6 9.3 9.3 6.6 10 1.5 Z" fill={color} />
+    </Svg>
+  );
+}
+
 // Angle unit picker: an angle with its arc, and the ✕ that closes the picker.
 export function AngleIcon({ size = 20, color }) {
   return (

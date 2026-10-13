@@ -16,9 +16,9 @@ function friendly(e) {
   return new Error(MESSAGES[e?.code] || 'Something went wrong. Check your connection');
 }
 
-async function call(name, data) {
+async function call(name, data, timeout = 70_000) {
   try {
-    const res = await httpsCallable(functions, name, { timeout: 70_000 })(data);
+    const res = await httpsCallable(functions, name, { timeout })(data);
     return res.data;
   } catch (e) {
     throw friendly(e);
@@ -68,4 +68,16 @@ export async function integrateFormula(f, angle, { retry = false } = {}) {
     integralCache.set(key, typeof F === 'string' ? F : '');
   }
   return integralCache.get(key);
+}
+
+/**
+ * Explanations for the AI study-notes export. Prose only: every number in the notes
+ * comes from the calculations, and features/export/studyNotes.js checks the reply.
+ * @param {{expr: string, result: string, angle: string, workings: {label: string, expr: string}[]}[]} items
+ * @returns {Promise<{title: string, intro: string, keyIdeas: string[], summary: string,
+ *   sections: {n: number, title: string, explanation: string, why: string[], mistake: string, tip: string}[]}>}
+ */
+export function studyNotes(items) {
+  // up to 5 model calls in parallel on the server, each allowed 90 s
+  return call('studyNotes', { items }, 130_000);
 }

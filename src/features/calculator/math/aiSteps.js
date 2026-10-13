@@ -11,11 +11,20 @@
 // (489×73 -> 489×70+489×3). Rewrites are the only place the model writes
 // numbers, so they must match the original value almost exactly; later
 // parts are quoted from the latest rewrite.
-import { closeParens, evaluate } from './engine';
+import { closeParens, evaluate, hasCalculus } from './engine';
 import { asOperand } from './format';
 import { normalizeExpr } from './normalize';
 
 const MAX_STEPS = 12;
+
+/**
+ * True when a calculation is worth workings: more than one operation to explain,
+ * or hard arithmetic such as 489×73 or 7488÷24 ("5+3" just shows its result).
+ * ∫, d/dx, Σ and Π get none: stepsFromPlan cannot check workings for them.
+ */
+export const needsSteps = (expr) =>
+  !hasCalculus(expr) &&
+  ((expr.match(/[+−×÷^!²³⁻√∛(]/g) || []).length >= 2 || /\d{2,}[×÷]\d{2,}/.test(expr));
 
 // Steps built from math.js values carry 10-digit rounding; model-written rewrites must be exact.
 const same = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
