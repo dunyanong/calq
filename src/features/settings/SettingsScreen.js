@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import ScreenHeader from '@/components/ScreenHeader';
+import { ANGLE_MODES, ANGLE_UNITS } from '@/components/AngleBadge';
 import Segmented from '@/components/Segmented';
 import Switch from '@/components/Switch';
 import { GoogleG } from '@/components/Icons';
@@ -80,10 +81,7 @@ export default function Settings() {
             t={t}
             value={angle}
             onChange={(v) => update({ angle: v })}
-            options={[
-              { value: 'deg', label: 'Degrees' },
-              { value: 'rad', label: 'Radians' },
-            ]}
+            options={ANGLE_UNITS.map((u) => ({ value: u, label: ANGLE_MODES[u].label }))}
           />
         </Card>
 
