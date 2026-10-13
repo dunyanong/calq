@@ -185,6 +185,25 @@ export function PlusIcon({ size = 24, color }) {
   );
 }
 
+// Angle unit picker: an angle with its arc, and the ✕ that closes the picker.
+export function AngleIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M16.5 16 H3.5 L13 4" />
+      <Path d="M8.6 9.7 A6 6 0 0 1 10.4 16" />
+    </Svg>
+  );
+}
+
+export function CloseIcon({ size = 18, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.7)}>
+      <Path d="M5 5 L15 15" />
+      <Path d="M15 5 L5 15" />
+    </Svg>
+  );
+}
+
 export function SunIcon({ size = 20, color }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.8)}>

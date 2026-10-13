@@ -36,6 +36,8 @@ export const light = {
   angleRadBg: 'rgba(67,56,202,.13)',
   angleDeg: '#047857',
   angleDegBg: 'rgba(4,120,87,.13)',
+  angleGrad: '#B45309',
+  angleGradBg: 'rgba(180,83,9,.13)',
 };
 
 export const dark = {
@@ -66,6 +68,8 @@ export const dark = {
   angleRadBg: 'rgba(192,132,252,.14)',
   angleDeg: '#2DD4BF',
   angleDegBg: 'rgba(45,212,191,.14)',
+  angleGrad: '#FBBF24',
+  angleGradBg: 'rgba(251,191,36,.14)',
 };
 
 // Keypad colours are the same in both themes (the keypad is always dark).
