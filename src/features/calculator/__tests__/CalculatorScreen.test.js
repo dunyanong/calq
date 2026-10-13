@@ -12,6 +12,9 @@ jest.mock('expo-crypto', () => {
 // Fonts are not needed to test behaviour.
 jest.mock('expo-font', () => ({ useFonts: () => [true], loadAsync: jest.fn() }));
 
+// Each test starts from a fresh install (an angle unit picked in one test must not leak into the next).
+beforeEach(() => require('@react-native-async-storage/async-storage').clear());
+
 // A key's face is rendered after the small SHIFT label above it, so press the last match.
 const press = (label) => fireEvent.press(screen.getAllByText(label).at(-1));
 
@@ -166,15 +169,64 @@ test('live preview shows the value while typing', async () => {
   expect(screen.getByText('= 36')).toBeTruthy();
 });
 
-test('tapping the DEG badge switches to radians', async () => {
+/** Opens the angle picker from the badge, picks a unit and presses OK. */
+const pickAngle = (current, unit) => {
+  fireEvent.press(screen.getByLabelText(current + '. Tap to change angle unit'));
+  fireEvent.press(screen.getByLabelText(unit));
+  fireEvent.press(screen.getByLabelText('OK'));
+};
+
+test('the angle picker switches to radians', async () => {
   await renderApp();
-  fireEvent.press(screen.getByLabelText('Degrees. Tap for radians'));
-  expect(screen.getByLabelText('Radians. Tap for degrees')).toBeTruthy();
+  pickAngle('Degrees', 'Radians');
+  expect(screen.getByLabelText('Radians. Tap to change angle unit')).toBeTruthy();
   for (const k of ['sin', 'π']) press(k);
   press('÷');
   press('2');
   press('=');
   expect(screen.getByText('= 1')).toBeTruthy();
+});
+
+test('the angle picker switches to gradians: sin(100) = 1', async () => {
+  await renderApp();
+  pickAngle('Degrees', 'Gradians');
+  expect(screen.getByLabelText('Gradians. Tap to change angle unit')).toBeTruthy();
+  expect(screen.getAllByText('GRAD').length).toBeGreaterThan(0);
+  for (const k of ['sin', '1', '0', '0']) press(k);
+  press('=');
+  expect(screen.getByText('= 1')).toBeTruthy();
+  expect(screen.getAllByLabelText('Gradian mode')).toHaveLength(2); // entry badge + the saved card
+});
+
+test('the angle picker shows worked examples and marks the current unit', async () => {
+  await renderApp();
+  fireEvent.press(screen.getByLabelText('Degrees. Tap to change angle unit'));
+  expect(screen.getByText('sin(90)=1')).toBeTruthy();
+  expect(screen.getByText('sin(π÷2)=1')).toBeTruthy();
+  expect(screen.getByText('sin(100)=1')).toBeTruthy();
+  expect(screen.getByLabelText('Degrees').props.accessibilityState).toEqual({ checked: true });
+  expect(screen.getByLabelText('Gradians').props.accessibilityState).toEqual({ checked: false });
+});
+
+test('the DEG chip on the keypad opens the angle picker too', async () => {
+  await renderApp();
+  expect(screen.getByLabelText('Angle unit: Degrees')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Angle unit: Degrees'));
+  fireEvent.press(screen.getByLabelText('Gradians'));
+  fireEvent.press(screen.getByLabelText('OK'));
+  expect(screen.getByLabelText('Angle unit: Gradians')).toBeTruthy();
+  expect(screen.getByLabelText('Gradians. Tap to change angle unit')).toBeTruthy(); // display badge follows
+});
+
+test('closing the angle picker without OK keeps the unit', async () => {
+  await renderApp();
+  fireEvent.press(screen.getByLabelText('Degrees. Tap to change angle unit'));
+  fireEvent.press(screen.getByLabelText('Radians'));
+  fireEvent.press(screen.getByLabelText('Close'));
+  expect(screen.getByLabelText('Degrees. Tap to change angle unit')).toBeTruthy();
+  for (const k of ['sin', '3', '0']) press(k);
+  press('=');
+  expect(screen.getByText('= 0.5')).toBeTruthy();
 });
 
 test('a/b shows the format a tap switches to', async () => {

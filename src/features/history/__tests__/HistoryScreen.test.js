@@ -61,13 +61,15 @@ test('empty history shows the empty state', async () => {
 test('each row shows the angle mode it was calculated in', async () => {
   const now = Date.now();
   const item = (id, angle) => ({ id, expr: 'sin(6.25)', result: '0', angle, pinned: false, createdAt: now, updatedAt: now });
-  await AsyncStorage.setItem('calq.history', JSON.stringify([item('a', 'rad'), item('b', 'deg')]));
+  await AsyncStorage.setItem('calq.history', JSON.stringify([item('a', 'rad'), item('b', 'deg'), item('c', 'grad')]));
 
   await render('/history');
   expect(screen.getByLabelText('Radian mode')).toBeTruthy();
   expect(screen.getByLabelText('Degree mode')).toBeTruthy();
   expect(screen.getByText('RAD')).toBeTruthy();
   expect(screen.getByText('DEG')).toBeTruthy();
+  expect(screen.getByLabelText('Gradian mode')).toBeTruthy();
+  expect(screen.getByText('GRAD')).toBeTruthy();
 });
 
 const seed = (...items) => {

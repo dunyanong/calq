@@ -2,6 +2,7 @@
 // (AI, signed-in users only), and Pin / Copy / Duplicate / Export actions.
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { angleMode } from '@/components/AngleBadge';
 import { CopyIcon, CsvIcon, DuplicateIcon, ExportIcon, LatexIcon, MarkdownIcon, PdfIcon, PinIcon, TextIcon } from '@/components/Icons';
 import { useAuth } from '@/features/auth/AuthContext';
 import { stepsFromPlan } from '@/features/calculator/math/aiSteps';
@@ -155,7 +156,7 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
         <View style={styles.head}>
           <Text style={[styles.expr, { color: t.panelInk }]}>{it.expr}</Text>
           <Text style={[styles.res, { color: t.panelInk }]}>= {it.result}</Text>
-          <Text style={styles.angle}>{it.angle === 'deg' ? 'DEGREES' : 'RADIANS'}</Text>
+          <Text style={styles.angle}>{angleMode(it.angle).long}</Text>
         </View>
         {state.status !== 'simple' && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
         {state.status === 'done' ? (

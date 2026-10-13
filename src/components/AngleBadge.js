@@ -2,12 +2,16 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { F } from '@/theme/fonts';
 
-// One entry per angle unit; ink / bg name the theme tokens for its colours.
-// Adding a unit (e.g. gradians) only needs a new entry here plus its tokens.
+// One entry per angle unit, in picker order; ink / bg name the theme tokens for its colours.
+// Adding a unit only needs a new entry here, its tokens, and its size in math/engine.js (RAD_PER).
 export const ANGLE_MODES = {
-  deg: { short: 'DEG', long: 'DEGREES', a11y: 'Degree mode', ink: 'angleDeg', bg: 'angleDegBg' },
-  rad: { short: 'RAD', long: 'RADIANS', a11y: 'Radian mode', ink: 'angleRad', bg: 'angleRadBg' },
+  deg: { short: 'DEG', long: 'DEGREES', label: 'Degrees', a11y: 'Degree mode', ink: 'angleDeg', bg: 'angleDegBg' },
+  rad: { short: 'RAD', long: 'RADIANS', label: 'Radians', a11y: 'Radian mode', ink: 'angleRad', bg: 'angleRadBg' },
+  grad: { short: 'GRAD', long: 'GRADIANS', label: 'Gradians', a11y: 'Gradian mode', ink: 'angleGrad', bg: 'angleGradBg' },
 };
+
+/** Every angle unit key: ['deg', 'rad', 'grad']. */
+export const ANGLE_UNITS = Object.keys(ANGLE_MODES);
 
 /** Mode info for an angle value; unknown or missing values fall back to degrees (the app default). */
 export const angleMode = (angle) => ANGLE_MODES[angle] || ANGLE_MODES.deg;

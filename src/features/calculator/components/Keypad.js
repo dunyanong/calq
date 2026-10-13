@@ -1,13 +1,14 @@
-// Dark keypad: drag handle, SHIFT/ALPHA bar with cursor keys, two swipeable
+// Dark keypad: drag handle, SHIFT/ALPHA/angle-unit bar with cursor keys, two swipeable
 // pages of keys, and the page footer. Casio layout in the app's colours:
 // greys plus the sky-blue accent for =, SHIFT and DEL/AC.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import KeyButton, { tick } from './KeyButton';
+import { angleMode } from '@/components/AngleBadge';
 import { CameraIcon, ChevronLeft, ChevronRight } from '@/components/Icons';
 import { NUMERIC_ROWS, SCIENTIFIC_ROWS, faceSize, isLetterMode, resolveKey } from '@/features/calculator/math/keys';
 import { F } from '@/theme/fonts';
-import { pad } from '@/theme/tokens';
+import { dark, pad } from '@/theme/tokens';
 
 const MODE_COLORS = { shift: pad.shiftOn, alpha: pad.alphaOn, sto: pad.alphaOn, rcl: pad.alphaOn, hyp: pad.hypOn };
 const MODE_LABELS = { shift: 'SHIFT ON', alpha: 'ALPHA ON', sto: 'STO', rcl: 'RCL', hyp: 'HYP' };
@@ -88,6 +89,8 @@ function ToolButton({ onPress, onLongPress, label, children }) {
  * @param {object} p
  * @param {'shift'|'alpha'|'sto'|'rcl'|'hyp'|null} p.mode
  * @param {'dec'|'frac'} p.output   result format (the a/b key shows the other one)
+ * @param {'deg'|'rad'|'grad'} p.angle  shown on the angle chip
+ * @param {() => void} p.onAnglePress  the angle chip was tapped (opens the angle unit picker)
  * @param {(key) => void} p.onKey
  * @param {(dir: -1|1, jump: boolean) => void} p.onCursor   ◀ ▶ (long-press jumps to the start / end)
  * @param {boolean} p.hidden          keypad collapsed to its handle
@@ -97,6 +100,8 @@ function ToolButton({ onPress, onLongPress, label, children }) {
 export default function Keypad({
   mode,
   output,
+  angle,
+  onAnglePress,
   onKey,
   onCursor,
   onToggleShift,
@@ -155,6 +160,9 @@ export default function Keypad({
 
   const modeLabel = MODE_LABELS[mode] || '';
   const modeInk = mode === 'shift' ? pad.shiftLabel : mode === 'hyp' ? pad.hypOn.ink : pad.alphaLabel;
+  // the keypad is always dark, so the chip takes the dark theme's unit colours
+  const unit = angleMode(angle);
+  const unitInk = dark[unit.ink];
 
   return (
     <Animated.View style={[styles.wrap, { transform: [{ translateY: drag }] }]}>
@@ -180,6 +188,21 @@ export default function Keypad({
           ]}
         >
           <Text style={[styles.modeText, { color: mode === 'alpha' ? pad.alphaBtn.onInk : pad.alphaBtn.offInk }]}>ALPHA</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            tick();
+            onAnglePress();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={'Angle unit: ' + unit.label}
+          accessibilityHint="Opens the angle unit picker"
+          style={({ pressed }) => [
+            styles.angleBtn,
+            { borderColor: unitInk, backgroundColor: dark[unit.bg], opacity: pressed ? 0.75 : 1 },
+          ]}
+        >
+          <Text style={[styles.modeText, { color: unitInk }]}>{unit.short}</Text>
         </Pressable>
         <Text style={[styles.modeLabel, { color: modeInk }]} numberOfLines={1}>
           {modeLabel}
@@ -260,6 +283,8 @@ const styles = StyleSheet.create({
   toolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2, paddingBottom: 10 },
   modeBtn: { paddingVertical: 6, paddingHorizontal: 13, borderRadius: 8 },
   modeText: { fontSize: 11, fontFamily: F.bodyHeavy },
+  // same height as SHIFT / ALPHA (the border replaces 1px of padding)
+  angleBtn: { paddingVertical: 5, paddingHorizontal: 9, borderRadius: 8, borderWidth: 1 },
   modeLabel: { flex: 1, textAlign: 'right', fontSize: 10.5, fontFamily: F.bodyHeavy, letterSpacing: 0.7 },
   tool: { width: 32, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: pad.scanBg },
   pager: { flex: 1, minHeight: 0 },

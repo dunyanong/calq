@@ -8,8 +8,10 @@ import CalcHeader from './components/CalcHeader';
 import DisplayPanel from './components/DisplayPanel';
 import Keypad from './components/Keypad';
 import HoldPanel from './components/HoldPanel';
+import AnglePicker from './components/AnglePicker';
 import { tick } from './components/KeyButton';
 import ScanSheet from '@/features/scan/ScanSheet';
+import { angleMode } from '@/components/AngleBadge';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
@@ -52,6 +54,7 @@ export default function Calculator() {
   // held calculation panel; session remounts the panel body on each open
   const [held, setHeld] = useState({ id: null, open: false, session: 0 });
   const [scan, setScan] = useState({ open: false, session: 0 });
+  const [anglePicker, setAnglePicker] = useState({ open: false, session: 0 });
   const [kbHidden, setKbHidden] = useState(false);
   const [bodyH, setBodyH] = useState(0);
   const [displayH] = useState(() => new Animated.Value(0));
@@ -136,8 +139,8 @@ export default function Calculator() {
     tick('impact');
     history.add({ expr, result, angle });
     // a Casio does this too, but textbooks assume radians
-    if (angle === 'deg' && hasCalculus(expr) && hasTrig(expr)) {
-      toast('Trig in ∫/d/dx uses degrees — switch to Rad for textbook answers');
+    if (angle !== 'rad' && hasCalculus(expr) && hasTrig(expr)) {
+      toast(`Trig in ∫/d/dx uses ${angleMode(angle).label.toLowerCase()} — switch to Radians for textbook answers`);
     }
     setEntry({ text: '', at: 0 });
     if (value !== undefined) update({ ans: value });
@@ -231,10 +234,14 @@ export default function Calculator() {
     if (v !== null) setVar(name, v);
   };
 
-  const toggleAngle = () => {
-    const next = angle === 'deg' ? 'rad' : 'deg';
-    update({ angle: next });
-    toast(next === 'deg' ? 'Degrees' : 'Radians');
+  const openAnglePicker = () => setAnglePicker((p) => ({ open: true, session: p.session + 1 }));
+  const closeAnglePicker = () => setAnglePicker((p) => ({ ...p, open: false }));
+  /** OK in the angle picker. */
+  const chooseAngle = (unit) => {
+    closeAnglePicker();
+    if (unit === angle) return;
+    update({ angle: unit });
+    toast(angleMode(unit).label);
   };
 
   const ACTIONS = {
@@ -323,7 +330,7 @@ export default function Calculator() {
           hint={busy ? 'Finding a formula…' : varsHint || boxHint(entry)}
           shake={shake}
           angle={angle}
-          onToggleAngle={toggleAngle}
+          onAnglePress={openAnglePicker}
           memory={vars.M !== 0}
           pinFilter={filterOn}
           onShowAll={() => setPinFilter(false)}
@@ -336,6 +343,8 @@ export default function Calculator() {
         <Keypad
           mode={mode}
           output={output}
+          angle={angle}
+          onAnglePress={openAnglePicker}
           onKey={onKey}
           onCursor={moveCursor}
           onToggleShift={() => setMode((m) => (m === 'shift' ? null : 'shift'))}
@@ -360,6 +369,15 @@ export default function Calculator() {
           setMode(null);
           closeScan();
         }}
+      />
+
+      <AnglePicker
+        visible={anglePicker.open}
+        session={anglePicker.session}
+        angle={angle}
+        t={t}
+        onClose={closeAnglePicker}
+        onChoose={chooseAngle}
       />
 
       <HoldPanel

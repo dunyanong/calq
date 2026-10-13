@@ -3,7 +3,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
-import AngleBadge from '@/components/AngleBadge';
+import AngleBadge, { angleMode } from '@/components/AngleBadge';
 import { BOX, boxLabel } from '@/features/calculator/math/entry';
 
 // Memoised: the entry changes on every key press, the cards do not.
@@ -87,7 +87,8 @@ function Shake({ trigger, children }) {
  * @param {string|null} p.preview  value of the entry so far, shown dimmed
  * @param {string|null} p.hint     what the box under the cursor is for (replaces the preview)
  * @param {number} p.shake         changes on a bad expression
- * @param {'deg'|'rad'} p.angle    unit for the next calculation (tap the badge to switch)
+ * @param {'deg'|'rad'|'grad'} p.angle  unit for the next calculation
+ * @param {() => void} p.onAnglePress  the badge was tapped (opens the angle unit picker)
  * @param {boolean} p.memory       M holds a value (shows the M pill)
  * @param {boolean} p.pinFilter    showing pinned only
  * @param {(item) => void} p.onRecall  a card was tapped
@@ -101,7 +102,7 @@ export default function DisplayPanel({
   hint,
   shake,
   angle,
-  onToggleAngle,
+  onAnglePress,
   memory,
   pinFilter,
   onShowAll,
@@ -140,10 +141,10 @@ export default function DisplayPanel({
           <View style={styles.entryRow}>
             <View style={styles.badges}>
               <Pressable
-                onPress={onToggleAngle}
+                onPress={onAnglePress}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={angle === 'deg' ? 'Degrees. Tap for radians' : 'Radians. Tap for degrees'}
+                accessibilityLabel={angleMode(angle).label + '. Tap to change angle unit'}
                 style={({ pressed }) => pressed && { opacity: 0.6 }}
               >
                 <AngleBadge angle={angle} t={t} />
