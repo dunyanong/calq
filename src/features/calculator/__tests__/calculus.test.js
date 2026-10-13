@@ -45,6 +45,7 @@ describe('∫(f(x),a,b)', () => {
   test('trig follows the angle mode, like a Casio', () => {
     // ∫ sin(x°) dx from 0 to 90 = 180/π
     expect(calc('∫(sin(x),0,90)', 'deg')).toBe(shown(180 / Math.PI));
+    expect(calc('∫(sin(x),0,100)', 'grad')).toBe(shown(200 / Math.PI));
   });
 
   test.each([
@@ -87,6 +88,7 @@ describe('d/dx(f(x),a)', () => {
 
   test('trig follows the angle mode, like a Casio', () => {
     expect(calc('d/dx(sin(x),0)', 'deg')).toBe(shown(Math.PI / 180));
+    expect(calc('d/dx(sin(x),0)', 'grad')).toBe(shown(Math.PI / 200));
   });
 
   test.each([

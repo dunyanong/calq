@@ -24,6 +24,20 @@ describe('evaluate', () => {
     expect(calc('sinh(0)')).toBe('0');
   });
 
+  test('gradians: 100 grad is a right angle', () => {
+    expect(calc('sin(100)', 'grad')).toBe('1');
+    expect(calc('cos(200)', 'grad')).toBe('-1');
+    expect(calc('sin(400)', 'grad')).toBe('0');
+    expect(calc('tan(50)', 'grad')).toBe('1');
+    expect(calc('sin⁻¹(1)', 'grad')).toBe('100');
+    expect(calc('cos⁻¹(0)', 'grad')).toBe('100');
+    expect(calc('tan⁻¹(1)', 'grad')).toBe('50');
+    expect(evaluate('tan(100)', 'grad')).toBeNull();
+    expect(evaluate('tan(−300)', 'grad')).toBeNull();
+    expect(evaluate('tan(90)', 'grad')).not.toBeNull(); // only right angles are undefined
+    expect(evaluate('tan(100)', 'deg')).not.toBeNull();
+  });
+
   test('implicit multiplication and constants', () => {
     expect(calc('2π')).toBe('6.283185307');
     expect(calc('2(3+1)')).toBe('8');

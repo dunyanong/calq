@@ -5,22 +5,24 @@
 // Nothing is shown unchecked. A derivative is printed back into calculator
 // notation and compared with math.js at sample points; an AI antiderivative
 // is accepted only if its numeric derivative equals f at every sample point.
-import { closeParens, evaluateNode, fnOfExpr, hasCalculus, math, toMathjs } from './engine';
+import { RAD_PER, closeParens, evaluateNode, fnOfExpr, hasCalculus, math, toMathjs } from './engine';
 import { differentiate } from './calculus';
 import { callArgs } from './entry';
 import { formatNumber } from './format';
 import { normalizeExpr } from './normalize';
 
 // Spread out, away from 0, inside (−1, 1) too (√(1−x²)), and large enough to see
-// a missing 180÷π in degree mode. Points where f is undefined are skipped.
+// a missing 180÷π (or 200÷π) in degree (or gradian) mode. Points where f is undefined are skipped.
 const SAMPLES = [0.13, 0.37, 0.59, 0.81, -0.29, -0.43, -0.71, 1.29, 1.83, 2.47, 3.61, 5.3, -1.17, -2.71, 7.9, 12.3, -33.3, 47.1];
 
 // math.js simplify, plus 1/2/√x -> 1/(2√x) style clean-ups
 const RULES = [...math.simplify.rules, 'n1 / n2 / n3 -> n1 / (n2 * n3)', 'n1 * (n2 / n3) -> (n1 * n2) / n3'];
 
-// Degree mode: the calculator's sin(x) is sin(x·deg_) with deg_ = π/180.
-const DEG = 'deg_';
-const DEG_SCOPE = { [DEG]: Math.PI / 180 };
+// Degree / gradian mode: the calculator's sin(x) is sin(x·unit_) with unit_ = π/180 or π/200.
+const UNIT = 'unit_';
+// unit_ as printed in each mode (radians has no unit_)
+const UNIT_TEXT = { deg: '(π÷180)', grad: '(π÷200)' };
+const hasUnit = (angle) => angle in UNIT_TEXT;
 
 const sym = (name) => new math.SymbolNode(name);
 const call = (name, args) => new math.FunctionNode(name, args);
@@ -38,7 +40,7 @@ class Unsupported extends Error {}
  * derivative understands; d/dx(f) without a point becomes its derivative.
  */
 function toStandard(node, angle) {
-  const deg = angle === 'deg';
+  const unit = hasUnit(angle);
   if (math.isFunctionNode(node)) {
     const name = node.fn.name;
     if (name === 'deriv' && node.args.length === 1) {
@@ -50,8 +52,8 @@ function toStandard(node, angle) {
       return new math.ConstantNode(evaluateNode(node, angle));
     }
     const args = node.args.map((a) => toStandard(a, angle));
-    if (TRIG[name]) return call(TRIG[name], [deg ? op('*', 'multiply', [args[0], sym(DEG)]) : args[0]]);
-    if (ARC[name]) return deg ? op('/', 'divide', [call(ARC[name], args), sym(DEG)]) : call(ARC[name], args);
+    if (TRIG[name]) return call(TRIG[name], [unit ? op('*', 'multiply', [args[0], sym(UNIT)]) : args[0]]);
+    if (ARC[name]) return unit ? op('/', 'divide', [call(ARC[name], args), sym(UNIT)]) : call(ARC[name], args);
     if (name === 'logb') return call('log', [args[1], args[0]]); // log_b(b, x) -> log(x, b)
     if (name === 'nroot') return call('nthRoot', [args[1], args[0]]); // ˣ√(n, x) -> nthRoot(x, n)
     return call(name, args);
@@ -98,67 +100,67 @@ function constant(v) {
   return [s, s.includes('×') ? P.mul : P.atom];
 }
 
-/** node / deg_, for a trig argument in degree mode (x·deg_ -> x); null if deg_ is not a factor. */
-function withoutDeg(node) {
-  if (math.isParenthesisNode(node)) return withoutDeg(node.content);
-  if (math.isSymbolNode(node) && node.name === DEG) return new math.ConstantNode(1);
+/** node / unit_, for a trig argument in degree or gradian mode (x·unit_ -> x); null if unit_ is not a factor. */
+function withoutUnit(node) {
+  if (math.isParenthesisNode(node)) return withoutUnit(node.content);
+  if (math.isSymbolNode(node) && node.name === UNIT) return new math.ConstantNode(1);
   if (!math.isOperatorNode(node)) return null;
   const [a, b] = node.args;
   if (node.fn === 'multiply') {
-    const left = withoutDeg(a);
+    const left = withoutUnit(a);
     if (left) return op('*', 'multiply', [left, b]);
-    const right = withoutDeg(b);
+    const right = withoutUnit(b);
     return right ? op('*', 'multiply', [a, right]) : null;
   }
   if (node.fn === 'divide') {
-    const top = withoutDeg(a);
+    const top = withoutUnit(a);
     return top ? op('/', 'divide', [top, b]) : null;
   }
   if (node.fn === 'unaryMinus') {
-    const inner = withoutDeg(a);
+    const inner = withoutUnit(a);
     return inner ? op('-', 'unaryMinus', [inner]) : null;
   }
   if (node.fn === 'add' || node.fn === 'subtract') {
-    const l = withoutDeg(a);
-    const r = withoutDeg(b);
+    const l = withoutUnit(a);
+    const r = withoutUnit(b);
     return l && r ? op(node.op, node.fn, [l, r]) : null;
   }
   return null;
 }
 
 /** [text, precedence] in calculator notation. Throws on anything it cannot write. */
-function print(node, deg) {
-  if (math.isParenthesisNode(node)) return print(node.content, deg);
+function print(node, angle) {
+  if (math.isParenthesisNode(node)) return print(node.content, angle);
   if (math.isConstantNode(node)) {
     const v = Number(node.value);
     if (v < 0) return ['−' + wrap(constant(-v), P.pow), P.neg];
     return constant(v);
   }
   if (math.isSymbolNode(node)) {
-    const s = { x: 'x', pi: 'π', e: 'e', [DEG]: '(π÷180)' }[node.name];
+    const s = { x: 'x', pi: 'π', e: 'e', [UNIT]: UNIT_TEXT[angle] }[node.name];
     if (!s) throw new Unsupported();
     return [s, P.atom];
   }
-  if (math.isFunctionNode(node)) return printCall(node, deg);
+  if (math.isFunctionNode(node)) return printCall(node, angle);
   if (!math.isOperatorNode(node)) throw new Unsupported();
 
   const [a, b] = node.args;
   switch (node.fn) {
     case 'unaryPlus':
-      return print(a, deg);
+      return print(a, angle);
     case 'unaryMinus':
-      return ['−' + wrap(print(a, deg), P.mul), P.neg];
+      return ['−' + wrap(print(a, angle), P.mul), P.neg];
     case 'add': {
-      const r = print(b, deg)[0];
-      return [print(a, deg)[0] + (r.startsWith('−') ? r : '+' + r), P.add];
+      const r = print(b, angle)[0];
+      return [print(a, angle)[0] + (r.startsWith('−') ? r : '+' + r), P.add];
     }
     case 'subtract':
-      return [print(a, deg)[0] + '−' + wrap(print(b, deg), P.mul), P.add];
+      return [print(a, angle)[0] + '−' + wrap(print(b, angle), P.mul), P.add];
     case 'multiply': {
       const [p, q] = math.isConstantNode(b) && !math.isConstantNode(a) ? [b, a] : [a, b]; // x·2 -> 2x
-      if (math.isConstantNode(p) && Number(p.value) === -1) return ['−' + wrap(print(q, deg), P.mul), P.neg];
-      const l = print(p, deg);
-      const r = print(q, deg);
+      if (math.isConstantNode(p) && Number(p.value) === -1) return ['−' + wrap(print(q, angle), P.mul), P.neg];
+      const l = print(p, angle);
+      const r = print(q, angle);
       // a factor without x leads: 2x, 3sin(x), 2πx, π(x+1), (π÷180)cos(x); otherwise an explicit ×
       // (a top-level ÷ would swallow what follows: 1÷ln(2)×x must keep its ×)
       const coefficient = !usesX(p) && (l[1] === P.atom || !l[0].includes('÷'));
@@ -168,13 +170,13 @@ function print(node, deg) {
       return [wrap(l, P.mul) + '×' + wrap(r, P.neg), P.mul];
     }
     case 'divide':
-      return [wrap(print(a, deg), P.mul) + '÷' + wrap(print(b, deg), P.neg + 1), P.mul];
+      return [wrap(print(a, angle), P.mul) + '÷' + wrap(print(b, angle), P.neg + 1), P.mul];
     case 'pow': {
-      const base = wrap(print(a, deg), P.atom);
+      const base = wrap(print(a, angle), P.atom);
       if (math.isConstantNode(b) && [2, 3, -1].includes(Number(b.value))) {
         return [base + { 2: '²', 3: '³', '-1': '⁻¹' }[Number(b.value)], P.pow];
       }
-      const e = print(b, deg);
+      const e = print(b, angle);
       return [base + '^' + (e[1] === P.atom && !e[0].startsWith('−') ? e[0] : '(' + e[0] + ')'), P.pow];
     }
     default:
@@ -182,14 +184,14 @@ function print(node, deg) {
   }
 }
 
-function printCall(node, deg) {
+function printCall(node, angle) {
   const name = node.fn.name;
   const args = node.args;
-  const inner = (n) => print(n, deg)[0];
-  if (deg && ['sin', 'cos', 'tan'].includes(name)) {
-    const angle = withoutDeg(args[0]);
-    if (!angle) throw new Unsupported();
-    return [name + '(' + inner(math.simplify(angle)) + ')', P.atom];
+  const inner = (n) => print(n, angle)[0];
+  if (hasUnit(angle) && ['sin', 'cos', 'tan'].includes(name)) {
+    const arg = withoutUnit(args[0]);
+    if (!arg) throw new Unsupported();
+    return [name + '(' + inner(math.simplify(arg)) + ')', P.atom];
   }
   if (name === 'log') {
     return args.length === 2 ? ['log_b(' + inner(args[1]) + ',' + inner(args[0]) + ')', P.atom] : ['ln(' + inner(args[0]) + ')', P.atom];
@@ -240,12 +242,12 @@ export function symbolicDerivative(expr, angle = 'deg') {
 
   try {
     const result = math.simplify(reciprocals(toStandard(tree, angle)), RULES);
-    const at = (x) => result.evaluate({ ...DEG_SCOPE, x });
+    const at = (x) => result.evaluate({ [UNIT]: RAD_PER[angle] ?? 1, x });
     if (!usesX(result)) {
       const v = at(0);
       return typeof v === 'number' && Number.isFinite(v) ? { value: v } : { error: 'Check the expression' };
     }
-    const text = print(result, angle === 'deg')[0];
+    const text = print(result, angle)[0];
     if (!sameFunction(text, angle, at)) throw new Unsupported(); // never show a misprinted formula
     return { text };
   } catch {
@@ -276,7 +278,7 @@ export function indefiniteIntegrand(expr, angle = 'deg') {
 function pretty(F, angle) {
   try {
     const tree = toStandard(math.parse(toMathjs(F)), angle);
-    const text = print(tree, angle === 'deg')[0];
+    const text = print(tree, angle)[0];
     return sameFunction(text, angle, fnOfExpr(F, angle)) ? text : F;
   } catch {
     return F;
