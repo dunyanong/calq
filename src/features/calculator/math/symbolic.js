@@ -7,7 +7,7 @@
 // is accepted only if its numeric derivative equals f at every sample point.
 import { RAD_PER, closeParens, evaluateNode, fnOfExpr, hasCalculus, math, toMathjs } from './engine';
 import { differentiate } from './calculus';
-import { callArgs } from './entry';
+import { BOX, callArgs } from './entry';
 import { formatNumber } from './format';
 import { normalizeExpr } from './normalize';
 
@@ -204,24 +204,31 @@ function printCall(node, angle) {
   return [NAMES[name] + '(' + inner(args[0]) + ')', P.atom];
 }
 
-/** True if the calculator expression `text` equals ref(x) at the sample points. */
-function sameFunction(text, angle, ref) {
-  const g = fnOfExpr(text, angle);
-  if (!g) return false;
+/**
+ * True if got(x) equals want(x), within relative tolerance tol, at every sample
+ * point where both are defined, and there are at least min such points.
+ */
+function matchesAtSamples(got, want, tol, min) {
   let valid = 0;
   for (const x of SAMPLES) {
-    let want;
+    let w;
     try {
-      want = ref(x);
+      w = want(x);
     } catch {
       continue;
     }
-    const got = g(x);
-    if (!Number.isFinite(want) || !Number.isFinite(got)) continue;
-    if (Math.abs(got - want) > 1e-8 * Math.max(1, Math.abs(want))) return false;
+    const g = got(x);
+    if (!Number.isFinite(w) || !Number.isFinite(g)) continue;
+    if (Math.abs(g - w) > tol * Math.max(1, Math.abs(w))) return false;
     valid++;
   }
-  return valid >= 3;
+  return valid >= min;
+}
+
+/** True if the calculator expression `text` equals ref(x) at the sample points. */
+function sameFunction(text, angle, ref) {
+  const g = fnOfExpr(text, angle);
+  return !!g && matchesAtSamples(g, ref, 1e-8, 3);
 }
 
 /**
@@ -293,19 +300,11 @@ function pretty(F, angle) {
 export function checkAntiderivative(f, candidate, angle = 'deg') {
   if (typeof candidate !== 'string') return null;
   const F = closeParens(normalizeExpr(candidate).replace(/\+[Cc]$/, ''));
-  if (!F || hasCalculus(F) || F.includes('□')) return null;
+  if (!F || hasCalculus(F) || F.includes(BOX)) return null;
   const Fx = fnOfExpr(F, angle);
   const fx = fnOfExpr(f, angle);
   if (!Fx || !fx) return null;
-  let valid = 0;
-  for (const x of SAMPLES) {
-    const want = fx(x);
-    const got = differentiate(Fx, x);
-    if (!Number.isFinite(want) || !Number.isFinite(got)) continue;
-    if (Math.abs(got - want) > 1e-6 * Math.max(1, Math.abs(want))) return null;
-    valid++;
-  }
-  return valid >= 4 ? pretty(F, angle) : null;
+  return matchesAtSamples((x) => differentiate(Fx, x), fx, 1e-6, 4) ? pretty(F, angle) : null;
 }
 
 /**

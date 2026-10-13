@@ -10,7 +10,7 @@ import { VARIABLES, tokenAfter, tokenBefore } from './keys';
 export const BOX = '□';
 
 // Keys that insert boxes, with what each box is for (shown under the entry).
-export const TEMPLATES = {
+const TEMPLATES = {
   '∫(': ['∫ f(x) dx · ▶ for the limits', 'From · leave both limits empty for a formula', 'To · leave both limits empty for a formula'],
   'd/dx(': ['d/dx of f(x) · ▶ for the point', 'At x = · leave empty for the formula'],
   'Σ(': ['Σ: the term, using x', 'x from (whole number)', 'x to (whole number)'],
