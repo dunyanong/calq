@@ -1,4 +1,17 @@
-// Jest: replace Google sign-in and Firebase with stubs. Tests run as a signed-out guest.
+// Jest: stubs for native modules, Google sign-in and Firebase. Tests run as a
+// signed-out guest; a test file can override any of these with its own jest.mock.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
+jest.mock('expo-crypto', () => {
+  let n = 0;
+  return { randomUUID: () => 'id-' + ++n };
+});
+jest.mock('expo-font', () => ({ useFonts: () => [true], loadAsync: jest.fn() })); // fonts don't affect behaviour
+jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: {} }));
+jest.mock('expo-sharing', () => ({}));
+
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),

@@ -1,9 +1,6 @@
 import { toCSV, toHtml, toLatex, toMarkdown, toText } from '../exportHistory';
 import { toLatexMath } from '../latex';
 
-jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: {} }));
-jest.mock('expo-sharing', () => ({}));
-
 const at = new Date(2026, 9, 5, 14, 3).getTime(); // 2026-10-05 14:03 local
 const items = [
   { id: 'a', expr: '(3+4)×12−5', result: '79', angle: 'deg', pinned: true, createdAt: at, updatedAt: at },
