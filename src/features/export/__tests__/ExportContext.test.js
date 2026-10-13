@@ -1,7 +1,7 @@
 // Export runs: AI study notes or the plain export, to the share sheet or Google Drive.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
 import { ExportProvider, useExport } from '@/features/export/ExportContext';
@@ -138,7 +138,7 @@ describe('share sheet', () => {
 
     fireEvent.press(screen.getByText('Cancel'));
     expect(screen.getByText('Export cancelled')).toBeTruthy();
-    expect(screen.queryByText('Writing study notes…')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Writing study notes…')).toBeNull()); // after the pill fades
     await act(async () => {
       finish(REPLY);
       await pending;

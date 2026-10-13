@@ -4,10 +4,11 @@
 //              (studyNotes.js); off, or for CSV and Text, the export is unchanged
 //   to         the share sheet, or the connected Google Drive folder (services/drive.js)
 // One export at a time, with a progress pill while the AI or Drive is working.
-import { createContext, useContext, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Loader from '@/components/Loader';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
@@ -36,6 +37,50 @@ const PHASES = {
 /** Name in Drive, e.g. "Calq study notes 2026-10-13 14-03.pdf" (no ":" for other systems). */
 const driveName = (format, notes) =>
   `${notes ? 'Calq study notes' : 'Calq history'} ${formatDate(Date.now()).replace(':', '-')}.${FORMATS[format].ext}`;
+
+/** The phase line; a new phase fades in rather than snapping. */
+function PhaseText({ phase }) {
+  const [opacity] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+  }, [opacity]);
+  return (
+    <Animated.Text style={[styles.text, styles.message, { opacity }]} numberOfLines={1}>
+      {PHASES[phase]}
+    </Animated.Text>
+  );
+}
+
+/** The progress pill: rises in while there is a phase, and fades out after the last one. */
+function ProgressPill({ phase, bottom, onCancel }) {
+  const [shown, setShown] = useState(phase); // the last phase, kept while fading out
+  const [anim] = useState(() => new Animated.Value(0));
+  if (phase && phase !== shown) setShown(phase);
+
+  useEffect(() => {
+    const a = Animated.timing(anim, { toValue: phase ? 1 : 0, duration: phase ? 220 : 180, useNativeDriver: true });
+    a.start(({ finished }) => finished && !phase && setShown(null));
+    return () => a.stop();
+  }, [anim, phase]);
+
+  if (!shown) return null;
+  return (
+    <View pointerEvents={phase ? 'box-none' : 'none'} style={[styles.wrap, { bottom }]}>
+      <Animated.View
+        style={[styles.pill, { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }] }]}
+        accessibilityLiveRegion="polite"
+        accessibilityElementsHidden={!phase}
+        importantForAccessibility={phase ? 'auto' : 'no-hide-descendants'}
+      >
+        <Loader color="#fff" label="Exporting" />
+        <PhaseText key={shown} phase={shown} />
+        <Pressable onPress={onCancel} hitSlop={10} accessibilityRole="button" style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <Text style={[styles.text, styles.cancel]}>Cancel</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
 
 export function ExportProvider({ children }) {
   const settings = useSettings();
@@ -150,19 +195,7 @@ export function ExportProvider({ children }) {
   return (
     <ExportContext.Provider value={value}>
       {children}
-      {phase && (
-        <View pointerEvents="box-none" style={[styles.wrap, { bottom: insets.bottom + 112 }]}>
-          <View style={styles.pill} accessibilityLiveRegion="polite">
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={[styles.text, styles.message]} numberOfLines={1}>
-              {PHASES[phase]}
-            </Text>
-            <Pressable onPress={cancel} hitSlop={10} accessibilityRole="button" style={({ pressed }) => pressed && { opacity: 0.6 }}>
-              <Text style={[styles.text, styles.cancel]}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
+      <ProgressPill phase={phase} bottom={insets.bottom + 112} onCancel={cancel} />
     </ExportContext.Provider>
   );
 }
