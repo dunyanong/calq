@@ -329,6 +329,7 @@ export default function Calculator() {
           cursor={entry.at}
           preview={preview}
           hint={busy ? 'Finding a formula…' : varsHint || boxHint(entry)}
+          busy={busy}
           shake={shake}
           angle={angle}
           onAnglePress={openAnglePicker}

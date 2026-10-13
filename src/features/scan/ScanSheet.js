@@ -1,7 +1,8 @@
 // "Scan a calculation": photo or screenshot -> AI reads it -> user checks/edits -> Insert.
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraIcon } from '@/components/Icons';
+import Loader from '@/components/Loader';
 import Popup from '@/components/Popup';
 import { evaluate } from '@/features/calculator/math/engine';
 import { formatNumber } from '@/features/calculator/math/format';
@@ -63,7 +64,11 @@ function Body({ t, angle, output, onInsert }) {
     <>
       <Text style={[styles.title, { color: t.panelInk }]}>Scan a calculation</Text>
 
-      {s.uri && <Image source={{ uri: s.uri }} style={[styles.photo, { borderColor: t.displayRule }]} resizeMode="contain" />}
+      {s.uri && <Image
+          source={{ uri: s.uri }}
+          style={[styles.photo, { borderColor: t.displayRule, opacity: s.status === 'reading' ? 0.55 : 1 }]}
+          resizeMode="contain"
+        />}
 
       {s.status === 'choose' && (
         <>
@@ -79,7 +84,7 @@ function Body({ t, angle, output, onInsert }) {
 
       {s.status === 'reading' && (
         <View style={styles.reading}>
-          <ActivityIndicator color={BLUE} />
+          <Loader color={BLUE} label="Reading the image" />
           <Text style={styles.hint}>Reading…</Text>
         </View>
       )}
@@ -138,7 +143,7 @@ const styles = StyleSheet.create({
   hint: { fontFamily: F.label, fontSize: 12, color: '#93958f' },
   label: { fontFamily: F.labelBold, fontSize: 10.5, letterSpacing: 0.5, color: BLUE },
   photo: { width: '100%', height: 140, borderRadius: 12, borderWidth: 1 },
-  reading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  reading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 8 },
   input: { fontFamily: F.monoBold, fontSize: 16, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   preview: { fontFamily: F.mono, fontSize: 13, textAlign: 'right' },
   row: { flexDirection: 'row', gap: 8, marginTop: 4 },

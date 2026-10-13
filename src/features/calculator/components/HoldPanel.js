@@ -1,8 +1,9 @@
 // Modal shown when a calculation is held: result, step-by-step workings
 // (AI, signed-in users only), and Pin / Copy / Duplicate / Export actions.
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { angleMode } from '@/components/AngleBadge';
+import { Skeleton, SkeletonGroup } from '@/components/Loader';
 import Popup from '@/components/Popup';
 import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon } from '@/components/Icons';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -69,15 +70,29 @@ function useSteps(it, signedIn) {
   return [state, load];
 }
 
-function StepsStatus({ state, onRetry }) {
-  if (state.status === 'loading') {
-    return (
-      <View style={styles.statusRow}>
-        <ActivityIndicator size="small" color={BLUE} />
-        <Text style={styles.statusText}>Working out the steps…</Text>
-      </View>
-    );
-  }
+// Placeholder steps in the shape of Step, so the panel does not jump when they arrive.
+const SKELETON_WIDTHS = ['72%', '58%', '84%'];
+
+function StepsSkeleton({ t }) {
+  return (
+    <View style={styles.steps}>
+      <SkeletonGroup style={styles.steps}>
+        {SKELETON_WIDTHS.map((w, i) => (
+          <View key={i} style={styles.skeletonStep}>
+            <Skeleton width={i === 1 ? 44 : 60} height={8} color={t.selBg} />
+            <Skeleton width={w} height={12} color={t.displayRule} />
+          </View>
+        ))}
+      </SkeletonGroup>
+      <Text style={[styles.statusText, styles.caption]} accessibilityLiveRegion="polite">
+        Working out the steps…
+      </Text>
+    </View>
+  );
+}
+
+function StepsStatus({ state, t, onRetry }) {
+  if (state.status === 'loading') return <StepsSkeleton t={t} />;
   if (state.status === 'guest') {
     return (
       <View style={styles.statusRow}>
@@ -118,7 +133,7 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
           ))}
         </ScrollView>
       ) : (
-        state.status !== 'simple' && <StepsStatus state={state} onRetry={load} />
+        state.status !== 'simple' && <StepsStatus state={state} t={t} onRetry={load} />
       )}
       <View style={styles.sep} />
       <View style={styles.actions}>
@@ -167,6 +182,8 @@ const styles = StyleSheet.create({
   rule: { height: 0, borderTopWidth: 1, marginVertical: 12 },
   stepsScroll: { maxHeight: 320, flexGrow: 0 },
   steps: { gap: 9 },
+  skeletonStep: { gap: 6, paddingVertical: 2 },
+  caption: { textAlign: 'center', marginTop: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 4 },
   statusText: { fontFamily: F.label, fontSize: 12, color: '#93958f', flexShrink: 1 },
   retry: { fontFamily: F.labelBold, fontSize: 12, color: BLUE },

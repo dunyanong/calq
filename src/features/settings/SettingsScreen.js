@@ -1,8 +1,9 @@
 // Settings screen: account, angle unit, output format, appearance, export (AI study notes, Google Drive).
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import Loader from '@/components/Loader';
 import ScreenHeader from '@/components/ScreenHeader';
 import { ANGLE_MODES, ANGLE_UNITS } from '@/components/AngleBadge';
 import Segmented from '@/components/Segmented';
@@ -32,7 +33,7 @@ function DriveCard({ t, user }) {
   const { drive: saved, update } = useSettings();
   const toast = useToast();
   const drive = user && saved?.uid === user.uid ? saved : null;
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null); // 'connect' | 'disconnect' while Google is working
   const [lost, setLost] = useState(false); // Google no longer gives Calq Drive access
   const [picker, setPicker] = useState({ open: false, session: 0 });
 
@@ -50,7 +51,7 @@ function DriveCard({ t, user }) {
   }, [email]);
 
   const connect = async () => {
-    setBusy(true);
+    setBusy('connect');
     try {
       await Drive.connect(user.email);
       // a reconnect keeps the folder; a first connect makes (or finds) "Calq"
@@ -61,7 +62,7 @@ function DriveCard({ t, user }) {
     } catch (e) {
       toast(e.message || 'Google Drive was not connected');
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -72,7 +73,7 @@ function DriveCard({ t, user }) {
         text: 'Disconnect',
         style: 'destructive',
         onPress: async () => {
-          setBusy(true);
+          setBusy('disconnect');
           try {
             await Drive.disconnect();
             update({ drive: null, exportTo: 'share' });
@@ -80,7 +81,7 @@ function DriveCard({ t, user }) {
           } catch (e) {
             toast('Could not disconnect: ' + (e.message || 'try again'));
           } finally {
-            setBusy(false);
+            setBusy(null);
           }
         },
       },
@@ -124,7 +125,10 @@ function DriveCard({ t, user }) {
       )}
       <View style={[styles.driveActions, { borderTopColor: t.divider }]}>
         {busy ? (
-          <ActivityIndicator color={t.sub} />
+          <View style={[styles.driveBtn, styles.busyRow]} accessibilityLiveRegion="polite">
+            <Loader color={t.sub} label={busy === 'connect' ? 'Connecting' : 'Disconnecting'} />
+            <Text style={[styles.driveBtnText, { color: t.sub }]}>{busy === 'connect' ? 'Connecting…' : 'Disconnecting…'}</Text>
+          </View>
         ) : (
           <>
             {(!drive || lost) && (
@@ -271,11 +275,15 @@ export default function Settings() {
           disabled={busy}
           style={({ pressed }) => [
             styles.google,
-            { borderColor: t.divider, backgroundColor: t.card, opacity: pressed ? 0.6 : 1 },
+            { borderColor: t.divider, backgroundColor: t.card, opacity: busy ? 0.7 : pressed ? 0.6 : 1 },
           ]}
+          accessibilityRole="button"
+          accessibilityState={{ busy }}
         >
-          {busy ? <ActivityIndicator color={t.sub} /> : !user && <GoogleG />}
-          <Text style={[styles.googleText, { color: t.text }]}>{user ? 'Sign out' : 'Continue with Google'}</Text>
+          {busy ? <Loader color={t.sub} label={user ? 'Signing out' : 'Signing in'} /> : !user && <GoogleG />}
+          <Text style={[styles.googleText, { color: t.text }]}>
+            {busy ? (user ? 'Signing out…' : 'Signing in…') : user ? 'Sign out' : 'Continue with Google'}
+          </Text>
         </Pressable>
 
         <Text style={[styles.version, { color: t.sub }]}>Calq {Constants.expoConfig?.version ?? ''}</Text>
@@ -305,6 +313,7 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: 15, fontFamily: F.bodyBold, maxWidth: '60%' },
   driveActions: { flexDirection: 'row', justifyContent: 'center', gap: 10, borderTopWidth: 1, paddingVertical: 10, minHeight: 50, alignItems: 'center' },
   driveBtn: { paddingVertical: 6, paddingHorizontal: 12 },
+  busyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   driveBtnText: { fontSize: 15, fontFamily: F.bodyBold, color: BLUE },
   google: {
     marginTop: 26,

@@ -4,6 +4,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
 import AngleBadge, { angleMode } from '@/components/AngleBadge';
+import Loader from '@/components/Loader';
 import { BOX, boxLabel } from '@/features/calculator/math/entry';
 
 // Memoised: the entry changes on every key press, the cards do not.
@@ -87,6 +88,7 @@ function Shake({ trigger, children }) {
  * @param {string|null} p.preview  value of the entry so far, shown dimmed
  * @param {string|null} p.hint     replaces the preview: what the box under the cursor is for,
  *                                 the variable values (ALPHA / STO / RCL) or "Finding a formula…"
+ * @param {boolean} p.busy         waiting for the AI: the hint gets the loading dots
  * @param {number} p.shake         changes on a bad expression
  * @param {'deg'|'rad'|'grad'} p.angle  unit for the next calculation
  * @param {() => void} p.onAnglePress  the badge was tapped (opens the angle unit picker)
@@ -101,6 +103,7 @@ export default function DisplayPanel({
   cursor = entry.length,
   preview,
   hint,
+  busy,
   shake,
   angle,
   onAnglePress,
@@ -164,7 +167,14 @@ export default function DisplayPanel({
             </Text>
           </View>
           {/* always laid out, so the line does not jump as the preview comes and goes */}
-          {hint ? (
+          {busy ? (
+            <View style={styles.busy}>
+              <Loader color={t.accent} size={4} label={hint} />
+              <Text style={[styles.hint, styles.busyText, { color: t.accent }]} numberOfLines={1}>
+                {hint}
+              </Text>
+            </View>
+          ) : hint ? (
             <Text style={[styles.hint, { color: t.accent }]} numberOfLines={1}>
               {hint}
             </Text>
@@ -211,5 +221,7 @@ const styles = StyleSheet.create({
   caret: { width: 2, height: 19, borderRadius: 1 },
   preview: { fontFamily: F.mono, fontSize: 14, textAlign: 'right', marginTop: 2 },
   hint: { fontFamily: F.label, fontSize: 12.5, textAlign: 'right', marginTop: 3, opacity: 0.9 },
+  busy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 3 },
+  busyText: { marginTop: 0, flexShrink: 1 },
   box: { opacity: 0.5, fontFamily: F.label, fontSize: 15 }, // a placeholder, not typed text
 });

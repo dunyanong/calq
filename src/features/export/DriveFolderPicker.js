@@ -2,8 +2,9 @@
 // Calq only has drive.file access, so it lists My Drive and the folders Calq made;
 // a new folder can be made here too.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CloseIcon, DriveIcon } from '@/components/Icons';
+import Loader, { Skeleton, SkeletonGroup } from '@/components/Loader';
 import Popup from '@/components/Popup';
 import { ROOT, createFolder, listFolders } from '@/services/drive';
 import { F } from '@/theme/fonts';
@@ -23,6 +24,20 @@ function FolderRow({ folder, selected, t, onPress }) {
         {folder.name}
       </Text>
     </Pressable>
+  );
+}
+
+// Two rows in the shape of FolderRow while the list loads.
+function SkeletonRows({ t }) {
+  return (
+    <SkeletonGroup>
+      {['46%', '62%'].map((w) => (
+        <View key={w} style={[styles.row, { borderTopColor: t.displayRule }]}>
+          <View style={[styles.radio, { borderColor: t.displayRule }]} />
+          <Skeleton width={w} height={12} color={t.displayRule} />
+        </View>
+      ))}
+    </SkeletonGroup>
   );
 }
 
@@ -78,7 +93,7 @@ function PickerBody({ current, t, onClose, onChoose }) {
         {all.map((f) => (
           <FolderRow key={f.id} folder={f} selected={f.id === current?.id} t={t} onPress={() => onChoose(f)} />
         ))}
-        {folders === null && <ActivityIndicator style={styles.loading} color={BLUE} />}
+        {folders === null && <SkeletonRows t={t} />}
       </ScrollView>
       <View style={[styles.foot, { borderTopColor: t.displayRule }]}>
         <Text style={styles.hint}>Calq can only see folders it made. New folder:</Text>
@@ -96,9 +111,10 @@ function PickerBody({ current, t, onClose, onChoose }) {
             onPress={create}
             disabled={creating || !name.trim()}
             accessibilityRole="button"
-            style={({ pressed }) => [styles.create, { opacity: creating || !name.trim() ? 0.4 : pressed ? 0.6 : 1 }]}
+            accessibilityState={{ busy: creating }}
+            style={({ pressed }) => [styles.create, { opacity: creating ? 1 : !name.trim() ? 0.4 : pressed ? 0.6 : 1 }]}
           >
-            {creating ? <ActivityIndicator size="small" color={BLUE} /> : <Text style={styles.createText}>Create</Text>}
+            {creating ? <Loader color={BLUE} label="Creating folder" /> : <Text style={styles.createText}>Create</Text>}
           </Pressable>
         </View>
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -130,12 +146,11 @@ const styles = StyleSheet.create({
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: BLUE },
   name: { flex: 1, fontFamily: F.bodySemi, fontSize: 15 },
-  loading: { paddingVertical: 14 },
   foot: { gap: 8, paddingHorizontal: 18, paddingVertical: 14, borderTopWidth: 1 },
   hint: { fontFamily: F.label, fontSize: 12, color: '#93958f' },
   newRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: { flex: 1, fontFamily: F.body, fontSize: 15, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
-  create: { borderWidth: 1.5, borderColor: BLUE, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 72, alignItems: 'center' },
+  create: { borderWidth: 1.5, borderColor: BLUE, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 72, minHeight: 37, alignItems: 'center', justifyContent: 'center' },
   createText: { fontFamily: F.labelBold, fontSize: 14, color: BLUE },
   error: { fontFamily: F.label, fontSize: 12, color: '#c0564b' },
 });
