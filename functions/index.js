@@ -64,6 +64,16 @@ const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const ANGLES = ['deg', 'rad', 'grad'];
 const angleOf = (v) => (ANGLES.includes(v) ? v : 'deg');
 
+/** request.data[name] as a non-empty expression of at most MAX_EXPR characters. */
+function exprArg(request, name, message) {
+  const v = request.data?.[name];
+  if (typeof v !== 'string' || !v.trim() || v.length > MAX_EXPR) throw new HttpsError('invalid-argument', message);
+  return v;
+}
+
+// A retry follows an answer the app rejected: a little randomness gets a different one.
+const temperatureOf = (request) => (request.data?.retry === true ? 0.6 : 0);
+
 export const scanEquation = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
   const image = request.data?.image;
@@ -91,11 +101,8 @@ export const scanEquation = onCall(OPTS, async (request) => {
 
 export const explainSteps = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
-  const expr = request.data?.expr;
+  const expr = exprArg(request, 'expr', 'Expected an expression');
   const angle = angleOf(request.data?.angle);
-  if (typeof expr !== 'string' || !expr.trim() || expr.length > MAX_EXPR) {
-    throw new HttpsError('invalid-argument', 'Expected an expression');
-  }
   await useQuota(uid, 'steps', STEPS_PER_DAY.value());
 
   const reply = await llm(
@@ -105,7 +112,7 @@ export const explainSteps = onCall(OPTS, async (request) => {
       { role: 'user', content: `Expression: ${expr}\nAngle: ${angle}` },
     ],
     1200,
-    request.data?.retry === true ? 0.6 : 0, // a retry follows a plan the app rejected: try another one
+    temperatureOf(request),
   );
   const steps = (Array.isArray(reply.steps) ? reply.steps : [])
     .slice(0, 12)
@@ -120,11 +127,8 @@ export const explainSteps = onCall(OPTS, async (request) => {
 
 export const integrateFormula = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
-  const f = request.data?.f;
+  const f = exprArg(request, 'f', 'Expected a function of x');
   const angle = angleOf(request.data?.angle);
-  if (typeof f !== 'string' || !f.trim() || f.length > MAX_EXPR) {
-    throw new HttpsError('invalid-argument', 'Expected a function of x');
-  }
   await useQuota(uid, 'integral', INTEGRALS_PER_DAY.value());
 
   const reply = await llm(
@@ -134,7 +138,7 @@ export const integrateFormula = onCall(OPTS, async (request) => {
       { role: 'user', content: `f(x) = ${f}\nAngle: ${angle}` },
     ],
     400,
-    request.data?.retry === true ? 0.6 : 0, // a retry follows an answer the app rejected
+    temperatureOf(request),
   );
   return { F: str(reply.F, MAX_EXPR) };
 });
