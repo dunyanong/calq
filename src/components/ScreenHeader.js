@@ -1,20 +1,26 @@
-// Header for non-calculator screens: menu button + title (or custom content).
+// Header for non-calculator screens: menu button + title.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hamburger } from './Icons';
 import { useDrawer } from './Drawer';
 import { F } from '@/theme/fonts';
 
-export default function ScreenHeader({ t, title, children }) {
+export default function ScreenHeader({ t, title }) {
   const insets = useSafeAreaInsets();
   const drawer = useDrawer();
   return (
     <View style={[styles.screenHeader, { backgroundColor: t.header, paddingTop: insets.top + 10 }]}>
-      <Pressable onPress={drawer.open} hitSlop={10} style={({ pressed }) => pressed && { opacity: 0.5 }}>
+      <Pressable
+        onPress={drawer.open}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Menu"
+        style={({ pressed }) => pressed && { opacity: 0.5 }}
+      >
         <Hamburger color={t.headerText} width={30} />
       </Pressable>
       <View style={styles.screenHeaderBody}>
-        {children || <Text style={[styles.title, { color: t.headerText }]}>{title}</Text>}
+        <Text style={[styles.title, { color: t.headerText }]}>{title}</Text>
       </View>
     </View>
   );

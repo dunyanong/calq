@@ -10,6 +10,7 @@ import { AuthProvider } from '@/features/auth/AuthContext';
 import { HistoryProvider, useHistory } from '@/features/history/HistoryContext';
 import { ToastProvider } from '@/components/Toast';
 import { DrawerProvider } from '@/components/Drawer';
+import { ExportProvider } from '@/features/export/ExportContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,9 +44,11 @@ export default function RootLayout() {
         <AuthProvider>
           <HistoryProvider>
             <ToastProvider>
-              <DrawerProvider>
-                <AppShell />
-              </DrawerProvider>
+              <ExportProvider>
+                <DrawerProvider>
+                  <AppShell />
+                </DrawerProvider>
+              </ExportProvider>
             </ToastProvider>
           </HistoryProvider>
         </AuthProvider>

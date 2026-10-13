@@ -1,21 +1,12 @@
 // "Scan a calculation": photo or screenshot -> AI reads it -> user checks/edits -> Insert.
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraIcon } from '@/components/Icons';
+import Popup from '@/components/Popup';
 import { evaluate } from '@/features/calculator/math/engine';
 import { formatNumber } from '@/features/calculator/math/format';
 import { normalizeExpr } from '@/features/calculator/math/normalize';
+import { indefiniteIntegrand, symbolicDerivative } from '@/features/calculator/math/symbolic';
 import { scanEquation } from '@/services/ai';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -56,7 +47,17 @@ function Body({ t, angle, output, onInsert }) {
   };
 
   const expr = normalizeExpr(s.text);
-  const value = expr ? evaluate(expr, angle) : null;
+  // d/dx without a point gives a formula, or a number when no x is left (d/dx(3x) = 3)
+  const formula = expr ? symbolicDerivative(expr, angle) : null;
+  const value = formula ? (formula.value ?? null) : expr ? evaluate(expr, angle) : null;
+  const shown =
+    value !== null
+      ? '= ' + formatNumber(value, output)
+      : formula?.text
+        ? '= ' + formula.text
+        : expr && indefiniteIntegrand(expr, angle)?.f // ∫ without limits: the formula comes from the AI at =
+          ? 'Insert, then press = for the formula'
+          : 'Can’t work this out — edit it';
 
   return (
     <>
@@ -96,9 +97,7 @@ function Body({ t, angle, output, onInsert }) {
             placeholder="e.g. 2×(3+4)"
             placeholderTextColor="#93958f"
           />
-          <Text style={[styles.preview, { color: value === null ? '#93958f' : BLUE }]}>
-            {value === null ? 'Can’t evaluate this yet' : '= ' + formatNumber(value, output)}
-          </Text>
+          <Text style={[styles.preview, { color: shown.startsWith('=') ? BLUE : '#93958f' }]}>{shown}</Text>
           {!!s.note && <Text style={styles.hint}>{s.note}</Text>}
           <View style={styles.row}>
             <Button label="Retake" t={t} onPress={() => setS(EMPTY)} />
@@ -126,34 +125,15 @@ function Body({ t, angle, output, onInsert }) {
  */
 export default function ScanSheet({ visible, session, t, angle, output, onClose, onInsert }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.scrim} onPress={onClose}>
-          {/* Inner Pressable swallows taps so they don't close the sheet */}
-          <Pressable onPress={() => {}} style={[styles.panel, { backgroundColor: t.panelBg }]}>
-            <Body key={session} t={t} angle={angle} output={output} onInsert={onInsert} />
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+    <Popup visible={visible} session={session} t={t} onClose={onClose} style={styles.panel} contentStyle={styles.content}>
+      <Body t={t} angle={angle} output={output} onInsert={onInsert} />
+    </Popup>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scrim: { flex: 1, backgroundColor: 'rgba(14,24,34,.55)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  panel: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 20,
-    padding: 16,
-    gap: 10,
-    shadowColor: 'rgb(5,14,24)',
-    shadowOpacity: 0.45,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 26 },
-    elevation: 24,
-  },
+  panel: { padding: 16 },
+  content: { gap: 10 },
   title: { fontFamily: F.labelBold, fontSize: 15 },
   hint: { fontFamily: F.label, fontSize: 12, color: '#93958f' },
   label: { fontFamily: F.labelBold, fontSize: 10.5, letterSpacing: 0.5, color: BLUE },

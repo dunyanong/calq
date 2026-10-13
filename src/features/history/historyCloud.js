@@ -46,7 +46,8 @@ async function batchEach(items, apply) {
   }
 }
 
-// Copies guest history into the user's cloud history. Safe to run more than once.
+// Copies items into the user's cloud history (guest history on sign-in, Undo after a delete).
+// Safe to run more than once.
 export function mergeLocal(uid, items) {
   return batchEach(items, (batch, it) => batch.set(historyDoc(uid, it.id), toDoc(it)));
 }

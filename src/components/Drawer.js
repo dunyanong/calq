@@ -1,5 +1,5 @@
-// Left slide-in menu shared by all screens (prototype drawer).
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+// Left slide-in menu shared by all screens.
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Animated, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { F } from '@/theme/fonts';
 
 const WIDTH = 270;
-const DrawerContext = createContext({ open: () => {}, close: () => {} });
+const DrawerContext = createContext({ open: () => {} });
 
 const NAV = [
   { key: 'calc', label: 'Calculator', href: '/', Icon: HomeIcon },
@@ -44,9 +44,7 @@ export function DrawerProvider({ children }) {
     return () => sub.remove();
   }, [isOpen]);
 
-  const open = useCallback(() => setOpen(true), []);
-  const close = useCallback(() => setOpen(false), []);
-  const ctx = useMemo(() => ({ open, close }), [open, close]);
+  const ctx = useMemo(() => ({ open: () => setOpen(true) }), []);
 
   const activeKey =
     pathname === '/settings'
@@ -57,9 +55,14 @@ export function DrawerProvider({ children }) {
           : 'recent'
         : 'calc';
 
+  // The calculator stays at the bottom of the stack with its entry, Ans and memory.
+  // (router.navigate would push a second calculator: it only reuses the current screen.)
   const go = (item) => {
     setOpen(false);
-    if (item.key !== activeKey) router.navigate(item.href);
+    if (item.key === activeKey) return;
+    if (item.key === 'calc') router.dismissTo('/');
+    else if (activeKey === 'calc') router.navigate(item.href);
+    else router.replace(item.href); // History <-> Settings: never more than one screen above the calculator
   };
 
   return (
@@ -69,7 +72,7 @@ export function DrawerProvider({ children }) {
         pointerEvents={isOpen ? 'auto' : 'none'}
         style={[StyleSheet.absoluteFill, styles.scrim, { opacity: anim }]}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
       </Animated.View>
       <Animated.View
         style={[

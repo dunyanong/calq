@@ -1,4 +1,4 @@
-// SVG icons copied path-for-path from the prototype.
+// SVG icons used across the app.
 import { Text, View } from 'react-native';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 
@@ -101,6 +101,27 @@ export function MarkdownIcon({ size = 20, color }) {
   );
 }
 
+export function LatexIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M6.4 16.6 V6.4 A3 3 0 0 1 9.4 3.4" />
+      <Path d="M4.4 9.4 H10.6" />
+      <Path d="M12.4 8.6 L16.6 15.4" />
+      <Path d="M16.6 8.6 L12.4 15.4" />
+    </Svg>
+  );
+}
+
+export function PdfIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M4.6 2.8 H11.4 L15.8 7.2 V17.2 H4.6 Z" />
+      <Path d="M11.2 2.9 V7.4 H15.7" />
+      <Path d="M7.2 13.6 H12.4" strokeWidth={1.7} />
+    </Svg>
+  );
+}
+
 export function CameraIcon({ size = 17, color }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 1.7)}>
@@ -150,6 +171,54 @@ export function GearIcon({ size = 22, color }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 1.9)}>
       <Circle cx="12" cy="12" r="3" />
       <Path d="M10.4 3.2 L13.6 3.2 L14.1 5.6 L16.2 6.8 L18.5 6 L20.1 8.8 L18.3 10.4 L18.3 13.6 L20.1 15.2 L18.5 18 L16.2 17.2 L14.1 18.4 L13.6 20.8 L10.4 20.8 L9.9 18.4 L7.8 17.2 L5.5 18 L3.9 15.2 L5.7 13.6 L5.7 10.4 L3.9 8.8 L5.5 6 L7.8 6.8 L9.9 5.6 Z" />
+    </Svg>
+  );
+}
+
+/** + (New session). */
+export function PlusIcon({ size = 24, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 2.4)}>
+      <Path d="M12 5 V19" />
+      <Path d="M5 12 H19" />
+    </Svg>
+  );
+}
+
+// Export: Google Drive (outline of its triangle) and the sparkle marking AI study notes.
+export function DriveIcon({ size = 18, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M7 3 H13 L18.5 12.5 L15.5 17.5 H4.5 L1.5 12.5 Z" />
+      <Path d="M7 3 L12.5 12.5 H18.5" />
+      <Path d="M4.5 17.5 L10 8" />
+    </Svg>
+  );
+}
+
+export function SparkleIcon({ size = 12, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20">
+      <Path d="M10 1.5 C10.7 6.6 13.4 9.3 18.5 10 C13.4 10.7 10.7 13.4 10 18.5 C9.3 13.4 6.6 10.7 1.5 10 C6.6 9.3 9.3 6.6 10 1.5 Z" fill={color} />
+    </Svg>
+  );
+}
+
+// Angle unit picker: an angle with its arc, and the ✕ that closes the picker.
+export function AngleIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M16.5 16 H3.5 L13 4" />
+      <Path d="M8.6 9.7 A6 6 0 0 1 10.4 16" />
+    </Svg>
+  );
+}
+
+export function CloseIcon({ size = 18, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.7)}>
+      <Path d="M5 5 L15 15" />
+      <Path d="M15 5 L5 15" />
     </Svg>
   );
 }

@@ -1,8 +1,6 @@
 # Dependencies
 node_modules/
 .npm/
-.yarn/
-.pnp.*
 
 # Expo / Metro
 .expo/
@@ -28,14 +26,12 @@ expo-env.d.ts
 # Firebase config (per-developer, never commit)
 .env
 .env.*
-!.env.example
 google-services.json
 GoogleService-Info.plist
 
 # Firebase CLI / emulator
 .firebase/
 .firebaserc
-*-debug.log
 emulator-data/
 
 # Signing keys
@@ -56,8 +52,6 @@ coverage/
 # Logs
 *.log
 npm-debug.*
-yarn-debug.*
-yarn-error.*
 
 # OS / editor
 .DS_Store

@@ -9,18 +9,19 @@ import { logger } from 'firebase-functions';
  * @param {string} p.apiKey
  * @param {string} p.model
  * @param {object[]} p.messages
- * @param {number} [p.maxTokens]
- * @param {number} [p.temperature]
+ * @param {number} p.maxTokens
+ * @param {number} p.temperature
+ * @param {number} [p.timeoutMs]  long replies (study notes) need more than the default
  * @returns {Promise<object>} the JSON object the model replied with
  */
-export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 800, temperature = 0 }) {
+export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens, temperature, timeoutMs = 45_000 }) {
   let res;
   try {
     res = await fetch(baseUrl.replace(/\/+$/, '') + '/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
       body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
     logger.error('LLM request failed', { model, error: String(e) });
@@ -41,7 +42,7 @@ export async function chatJson({ baseUrl, apiKey, model, messages, maxTokens = 8
 }
 
 /** Pulls the first {...} object out of a reply that may have ``` fences or extra words. */
-export function parseJsonObject(text) {
+function parseJsonObject(text) {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) return null;
