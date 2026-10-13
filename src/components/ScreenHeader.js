@@ -1,11 +1,11 @@
-// Header for non-calculator screens: menu button + title (or custom content).
+// Header for non-calculator screens: menu button + title.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hamburger } from './Icons';
 import { useDrawer } from './Drawer';
 import { F } from '@/theme/fonts';
 
-export default function ScreenHeader({ t, title, children }) {
+export default function ScreenHeader({ t, title }) {
   const insets = useSafeAreaInsets();
   const drawer = useDrawer();
   return (
@@ -20,7 +20,7 @@ export default function ScreenHeader({ t, title, children }) {
         <Hamburger color={t.headerText} width={30} />
       </Pressable>
       <View style={styles.screenHeaderBody}>
-        {children || <Text style={[styles.title, { color: t.headerText }]}>{title}</Text>}
+        <Text style={[styles.title, { color: t.headerText }]}>{title}</Text>
       </View>
     </View>
   );

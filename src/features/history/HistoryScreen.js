@@ -76,8 +76,8 @@ export default function HistoryScreen() {
   const starred = filter === 'pinned';
   const [exportOpen, setExportOpen] = useState(false);
 
-  // newest first
-  const items = history.items.filter((it) => !starred || it.pinned).slice().reverse();
+  const matching = history.items.filter((it) => !starred || it.pinned); // oldest first, for export
+  const items = [...matching].reverse(); // newest first
 
   const copy = async (text) => {
     await Clipboard.setStringAsync(text);
@@ -110,7 +110,7 @@ export default function HistoryScreen() {
 
   const onExport = (format) => {
     setExportOpen(false);
-    shareExport(items.slice().reverse(), format).catch((e) => toast(e.message || 'Export failed'));
+    shareExport(matching, format).catch((e) => toast(e.message || 'Export failed'));
   };
 
   return (

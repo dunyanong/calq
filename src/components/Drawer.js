@@ -1,5 +1,5 @@
-// Left slide-in menu shared by all screens (prototype drawer).
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+// Left slide-in menu shared by all screens.
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Animated, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { F } from '@/theme/fonts';
 
 const WIDTH = 270;
-const DrawerContext = createContext({ open: () => {}, close: () => {} });
+const DrawerContext = createContext({ open: () => {} });
 
 const NAV = [
   { key: 'calc', label: 'Calculator', href: '/', Icon: HomeIcon },
@@ -44,9 +44,7 @@ export function DrawerProvider({ children }) {
     return () => sub.remove();
   }, [isOpen]);
 
-  const open = useCallback(() => setOpen(true), []);
-  const close = useCallback(() => setOpen(false), []);
-  const ctx = useMemo(() => ({ open, close }), [open, close]);
+  const ctx = useMemo(() => ({ open: () => setOpen(true) }), []);
 
   const activeKey =
     pathname === '/settings'
@@ -74,7 +72,7 @@ export function DrawerProvider({ children }) {
         pointerEvents={isOpen ? 'auto' : 'none'}
         style={[StyleSheet.absoluteFill, styles.scrim, { opacity: anim }]}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
       </Animated.View>
       <Animated.View
         style={[

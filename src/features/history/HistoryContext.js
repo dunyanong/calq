@@ -34,7 +34,7 @@ function reducer(items, action) {
   }
 }
 
-export function newItem({ expr, result, angle, pinned = false }) {
+function newItem({ expr, result, angle, pinned = false }) {
   const now = Date.now();
   return { id: randomUUID(), expr, result, angle, pinned, createdAt: now, updatedAt: now };
 }
