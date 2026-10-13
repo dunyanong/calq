@@ -28,7 +28,7 @@ export function SettingsProvider({ children }) {
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
-/** { angle, output, dark, theme, update(patch), ready } */
+/** { angle, output, dark, ans, vars, sessionStart, theme, update(patch), ready } */
 export function useSettings() {
   return useContext(SettingsContext);
 }

@@ -57,9 +57,14 @@ export function DrawerProvider({ children }) {
           : 'recent'
         : 'calc';
 
+  // The calculator stays at the bottom of the stack with its entry, Ans and memory.
+  // (router.navigate would push a second calculator: it only reuses the current screen.)
   const go = (item) => {
     setOpen(false);
-    if (item.key !== activeKey) router.navigate(item.href);
+    if (item.key === activeKey) return;
+    if (item.key === 'calc') router.dismissTo('/');
+    else if (activeKey === 'calc') router.navigate(item.href);
+    else router.replace(item.href); // History <-> Settings: never more than one screen above the calculator
   };
 
   return (

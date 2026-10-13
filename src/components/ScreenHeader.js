@@ -10,7 +10,13 @@ export default function ScreenHeader({ t, title, children }) {
   const drawer = useDrawer();
   return (
     <View style={[styles.screenHeader, { backgroundColor: t.header, paddingTop: insets.top + 10 }]}>
-      <Pressable onPress={drawer.open} hitSlop={10} style={({ pressed }) => pressed && { opacity: 0.5 }}>
+      <Pressable
+        onPress={drawer.open}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Menu"
+        style={({ pressed }) => pressed && { opacity: 0.5 }}
+      >
         <Hamburger color={t.headerText} width={30} />
       </Pressable>
       <View style={styles.screenHeaderBody}>

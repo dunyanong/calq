@@ -6,12 +6,19 @@ export const DEFAULT_SETTINGS = {
   angle: 'deg', // 'deg' | 'rad'
   output: 'dec', // 'dec' | 'frac'
   dark: false,
+  // calculator memory, kept here so it survives a restart like on a Casio
+  ans: 0,
+  vars: { A: 0, B: 0, C: 0, D: 0, F: 0, M: 0 },
+  // New session (menu): the calculator screen shows calculations from this time on
+  sessionStart: 0,
 };
 
 export async function loadSettings() {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+    if (!raw) return DEFAULT_SETTINGS;
+    const saved = JSON.parse(raw);
+    return { ...DEFAULT_SETTINGS, ...saved, vars: { ...DEFAULT_SETTINGS.vars, ...saved.vars } };
   } catch {
     return DEFAULT_SETTINGS;
   }

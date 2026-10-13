@@ -1,9 +1,9 @@
-// Calculator header: menu button, Calq logo, pinned-calculations pill.
+// Calculator header: menu button, Calq logo, pinned-calculations pill, + (new session).
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Logo from '@/components/Logo';
-import { Hamburger, PinSolid } from '@/components/Icons';
+import { Hamburger, PinSolid, PlusIcon } from '@/components/Icons';
 import { useDrawer } from '@/components/Drawer';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -31,18 +31,33 @@ function PinPill({ label, active, onPress }) {
   );
 }
 
-export default function CalcHeader({ t, pinCount, pinFilter, onPinPill }) {
+export default function CalcHeader({ t, pinCount, pinFilter, onPinPill, onNewSession }) {
   const insets = useSafeAreaInsets();
   const drawer = useDrawer();
   return (
     <View style={[styles.calcHeader, { backgroundColor: t.header, paddingTop: insets.top + 6 }]}>
-      <Pressable onPress={drawer.open} hitSlop={10} style={({ pressed }) => pressed && { opacity: 0.5 }}>
+      <Pressable
+        onPress={drawer.open}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Menu"
+        style={({ pressed }) => pressed && { opacity: 0.5 }}
+      >
         <Hamburger color={t.headerInk} />
       </Pressable>
       <View style={styles.logo}>
         <Logo color={t.headerInk} />
       </View>
       {pinCount > 0 && <PinPill label={pinFilter ? 'All' : String(pinCount)} active={pinFilter} onPress={onPinPill} />}
+      <Pressable
+        onPress={onNewSession}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="New session"
+        style={({ pressed }) => pressed && { opacity: 0.5 }}
+      >
+        <PlusIcon color={t.headerInk} />
+      </Pressable>
     </View>
   );
 }

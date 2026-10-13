@@ -3,7 +3,7 @@
 // keypad colours come from "Scientific Calculator".
 
 const ACCENT_LIGHT = '#2a7093';
-const ACCENT_DARK = '#7cbfe4';
+export const ACCENT_DARK = '#7cbfe4';
 
 export const light = {
   dark: false,
@@ -31,6 +31,11 @@ export const light = {
   panelBg: '#FAF7F1',
   panelInk: '#1d2630',
   panelAction: '#3c4551',
+  // angle-mode badge: ink for text + outline, bg is the same colour at ~13%
+  angleRad: '#4338CA',
+  angleRadBg: 'rgba(67,56,202,.13)',
+  angleDeg: '#047857',
+  angleDegBg: 'rgba(4,120,87,.13)',
 };
 
 export const dark = {
@@ -57,24 +62,33 @@ export const dark = {
   panelBg: '#3a465b',
   panelInk: '#eaf0f8',
   panelAction: '#cfd8e4',
+  angleRad: '#C084FC',
+  angleRadBg: 'rgba(192,132,252,.14)',
+  angleDeg: '#2DD4BF',
+  angleDegBg: 'rgba(45,212,191,.14)',
 };
 
 // Keypad colours are the same in both themes (the keypad is always dark).
+// One grey family plus the app's sky-blue accent (=, SHIFT, DEL/AC text);
+// digits are the lightest grey, functions the darkest.
 export const pad = {
   bg: '#1e2228',
   handle: '#4c5563',
-  key: { bg: '#3b4450', ink: '#f2f6f9' },
-  op: { bg: '#333b45', ink: '#cdd6df' },
-  eq: { bg: '#a9d6ae', ink: '#1c2a1e' },
-  shiftOn: { bg: '#2f5b45', ink: '#c8ecd6' },
-  alphaOn: { bg: '#2c4763', ink: '#cfe4f6' },
-  shiftLabel: '#8fd0a8',
-  alphaLabel: '#7fb4e0',
-  shiftBtn: { off: '#2f7d4f', offInk: '#eafaee', on: '#a9d6ae', onInk: '#1c2a1e' },
-  alphaBtn: { off: '#2f5f9e', offInk: '#eaf3fb', on: '#9ec9ef', onInk: '#12283d' },
+  num: { bg: '#3b4450', ink: '#f2f6f9' },
+  op: { bg: '#333b45', ink: '#ffffff' },
+  fn: { bg: '#2a3039', ink: '#cdd6df' },
+  del: { bg: '#333b45', ink: ACCENT_DARK },
+  eq: { bg: ACCENT_DARK, ink: '#12283d' },
+  shiftOn: { bg: '#24384a', ink: '#cfe9f8' },
+  alphaOn: { bg: '#353c46', ink: '#e6ebf0' },
+  hypOn: { bg: '#353c46', ink: '#e6ebf0' },
+  shiftLabel: ACCENT_DARK,
+  alphaLabel: '#8a96a3',
+  shiftBtn: { off: '#24384a', offInk: ACCENT_DARK, on: ACCENT_DARK, onInk: '#12283d' },
+  alphaBtn: { off: '#2c323a', offInk: '#aeb8c4', on: '#aeb8c4', onInk: '#1e2228' },
   scanBg: '#2a2f37',
   scanInk: '#c3ccd6',
-  dotOn: '#a9d6ae',
+  dotOn: ACCENT_DARK,
   dotOff: '#3d4650',
   pageLabel: '#66707c',
   arrowBorder: '#2c323a',

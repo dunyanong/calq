@@ -94,11 +94,12 @@ npx expo run:ios --device
 
 Google sign-in on the Android emulator needs a system image with Google Play (Device Manager shows the Play Store icon).
 
-## AI features (scan + steps)
+## AI features (scan, steps, ∫ formulas)
 
 Signed-in users only. Both run through Cloud Functions in `functions/`, which call open-weights models (Qwen) on an OpenAI-compatible API. OpenRouter is the default.
 
 - **Scan** (camera key on the keypad): photo or screenshot → `scanEquation` (vision model) → expression in calculator notation → the user checks or edits it → inserted into the entry.
+- **∫ formulas**: ∫dx with both limits left empty (∫(x²,□,□)) asks `integrateFormula` (text model) for an antiderivative F. The app accepts F only if its numeric derivative equals f at many sample points (`math/symbolic.js`), asks once more if not, and otherwise says it couldn't find one; a wrong formula is never shown. d/dx with the point left empty needs no AI: math.js works out the derivative on the device.
 - **Steps** (load when you hold a calculation with more than one operation, or big numbers like 489×73): `explainSteps` (text model) says which parts are worked out in each step, in what order, with a short note. It can also rewrite hard arithmetic into an easier equal form (489×73 → 489×70+489×3). The app computes every value with math.js (`math/aiSteps.js`) and checks that each step still equals the result. A plan that fails the check is never shown ("Couldn't explain this one" + Retry). Guests see "Sign in to see steps"; simple calculations like 5+3 show no steps.
 
 Setup (once per Firebase project):
@@ -113,16 +114,16 @@ Setup (once per Firebase project):
    cd functions && npm install && cd ..
    npx firebase deploy --only functions
    ```
-   The first deploy asks for the params below; press Enter to keep the defaults. They are saved in `functions/.env.<project-id>`.
+   The first deploy asks for the params below; press Enter to keep the defaults. They are saved in `functions/.env.<project-id>` (git ignores it). A deploy without a terminal (script, CI) cannot ask, so that file must exist first.
 
 | Param | Default | |
 |---|---|---|
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | any OpenAI-compatible API: Together, Groq, DeepInfra, your own vLLM/Ollama |
 | `OCR_MODEL` | `qwen/qwen3-vl-235b-a22b-instruct` | must accept images |
 | `STEPS_MODEL` | `qwen/qwen3-235b-a22b-2507` | |
-| `SCANS_PER_DAY` / `STEPS_PER_DAY` | `30` / `200` | per user, counted in `usage/{uid}` |
+| `SCANS_PER_DAY` / `STEPS_PER_DAY` / `INTEGRALS_PER_DAY` | `30` / `200` / `50` | per user, counted in `usage/{uid}` |
 
-`expo-image-picker` is a native module, so run `npm run android` / `npm run ios` once after pulling this.
+`expo-image-picker` and `expo-print` (PDF export) are native modules, so run `npm run android` / `npm run ios` once after pulling them (on iOS run `pod install` in `ios/` first, with `LANG=en_US.UTF-8`).
 
 Logs: `npx firebase functions:log`. Prompts are in `functions/prompts.js`.
 
@@ -146,27 +147,29 @@ To try a rule by hand instead: Firebase console → Firestore Database → Rules
 ```
 src/
   app/                      routes only (Expo Router), each re-exports a screen
-  components/               shared UI: Drawer, Toast, ScreenHeader, Logo, Icons, Switch, Segmented
+  components/               shared UI: Drawer, Toast, ScreenHeader, Logo, Icons, Switch, Segmented, AngleBadge
   features/
     calculator/
       CalculatorScreen.js
       components/           CalcHeader, DisplayPanel, Keypad, KeyButton, HoldPanel
-      math/                 engine, format, keys, aiSteps (checks AI plans), normalize
+      math/                 engine (math.js), entry (cursor, input boxes, variables), keys, format,
+                            calculus (numeric ∫ d/dx), symbolic (formulas), aiSteps (checks AI plans), normalize
       __tests__/
     scan/                   ScanSheet (scan a calculation), pickImage (camera/library -> JPEG)
     history/
       HistoryContext.js     history state: device storage for guests, Firestore when signed in
-      HistoryScreen.js      Recent / Starred list
+      HistoryScreen.js      Recent / Starred list (tap a row to edit it again, Undo after delete)
       historyStore.js       AsyncStorage
       historyCloud.js       Firestore reads/writes, merge on sign-in
-      exportHistory.js      CSV / text / Markdown + share sheet
+      exportHistory.js      CSV / text / Markdown / LaTeX / PDF + share sheet
+      latex.js              calculator notation -> LaTeX
       __tests__/
     auth/                   AuthContext (Google sign-in -> Firebase Auth)
-    settings/               SettingsScreen, SettingsContext, settingsStore
+    settings/               SettingsScreen, SettingsContext, settingsStore (also Ans and the variables)
   services/firebase.js      Firebase app, Auth, Firestore, Functions
   services/ai.js            calls the AI Cloud Functions
   theme/                    colours, fonts
-functions/                  Cloud Functions: scanEquation, explainSteps (LLM calls + daily quotas)
+functions/                  Cloud Functions: scanEquation, explainSteps, integrateFormula (LLM calls + daily quotas)
 firestore.rules             security rules (publish in the Firebase console)
 firestore-tests/            rules tests (npm run test:rules)
 ```
@@ -175,4 +178,6 @@ firestore-tests/            rules tests (npm run test:rules)
 - New feature: add a folder in `src/features/`, add a one-line route in `src/app/`.
 - `math/engine.js` translates display symbols (`×`, `÷`, `√(`, `sin⁻¹(`) to math.js syntax. Unknown input fails. No `eval`.
 - `math/keys.js` defines every key as data. Add or change keys there.
+- Variables A, B, C, D, F, M (on the numeric page): ALPHA + key types the letter, SHIFT RCL (STO) + key stores the entry (or Ans), RCL + key inserts the value. M+ / M− add to M. Values and Ans are kept on the device. `=` saves the values into the history expression (`2A` → `2(12)`), so a saved calculation never changes. ALPHA + √ types the unknown x for ∫, d/dx, Σ, Π (the same as the x key on the scientific page); it is not a stored variable.
+- + (top right of the calculator) starts a new session: the screen starts empty (earlier calculations stay in Recent and behind the pin pill), Ans and the variables go back to 0. Undo in the toast brings it all back, including the line you were typing. Stored as `sessionStart` in settings.
 - Firestore data: `users/{uid}/history/{calcId}` = `{ expr, result, angle, pinned, createdAt, updatedAt }`. `calcId` is the item's UUID, so merging guest history on sign-in never duplicates items. Changing these fields means changing `firestore.rules` too.
