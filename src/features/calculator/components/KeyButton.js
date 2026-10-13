@@ -18,18 +18,18 @@ export function tick(style = 'selection') {
 /**
  * One keypad key. `silent` skips the tick when the key gives its own feedback (= ).
  * `dim` greys out a key that only cancels the current mode (no variable in ALPHA / STO / RCL).
- * The 2px bottom edge from the prototype is drawn by
- * leaving a strip of the outer view visible; pressing moves the key
- * down 1px, hides it and shrinks the key slightly, like a real key.
+ * The 2px bottom edge is drawn by leaving a strip of the outer view
+ * visible; pressing moves the key down 1px, hides it and shrinks the key
+ * slightly, like a real key.
  */
-function KeyButton({ face, size, bg, ink, edge = pad.shadow, radius = 10, minHeight = 34, silent, dim, onPress }) {
+function KeyButton({ face, size, bg, ink, radius, minHeight, silent, dim, onPress }) {
   return (
     <Pressable
       onPress={() => {
         if (!silent) tick();
         onPress();
       }}
-      style={[styles.outer, { borderRadius: radius, minHeight, backgroundColor: edge, opacity: dim ? 0.35 : 1 }]}
+      style={[styles.outer, { borderRadius: radius, minHeight, backgroundColor: pad.shadow, opacity: dim ? 0.35 : 1 }]}
       hitSlop={2}
       accessibilityRole="button"
       accessibilityLabel={face}

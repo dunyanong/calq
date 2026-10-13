@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { F } from '@/theme/fonts';
 
 // One entry per angle unit, in picker order; ink / bg name the theme tokens for its colours.
-// Adding a unit only needs a new entry here, its tokens, and its size in math/engine.js (RAD_PER).
+// A new unit also needs: its tokens (theme/tokens.js), RAD_PER and, if a right angle is a
+// whole number, QUARTER (math/engine.js), UNIT_TEXT (math/symbolic.js), EXAMPLES
+// (AnglePicker.js), firestore.rules, and ANGLES plus the angle wording in functions/.
 export const ANGLE_MODES = {
   deg: { short: 'DEG', long: 'DEGREES', label: 'Degrees', a11y: 'Degree mode', ink: 'angleDeg', bg: 'angleDegBg' },
   rad: { short: 'RAD', long: 'RADIANS', label: 'Radians', a11y: 'Radian mode', ink: 'angleRad', bg: 'angleRadBg' },
@@ -18,19 +20,18 @@ export const angleMode = (angle) => ANGLE_MODES[angle] || ANGLE_MODES.deg;
 
 /**
  * @param {object} p
- * @param {string} p.angle   key of ANGLE_MODES
- * @param {boolean} [p.long] full word instead of the short label
+ * @param {string} p.angle  key of ANGLE_MODES
  */
-export default function AngleBadge({ angle, t, long, style }) {
+export default function AngleBadge({ angle, t }) {
   const m = angleMode(angle);
   return (
     <View
       accessible
       accessibilityRole="text"
       accessibilityLabel={m.a11y}
-      style={[styles.pill, { backgroundColor: t[m.bg], borderColor: t[m.ink] }, style]}
+      style={[styles.pill, { backgroundColor: t[m.bg], borderColor: t[m.ink] }]}
     >
-      <Text style={[styles.text, { color: t[m.ink] }]}>{long ? m.long : m.short}</Text>
+      <Text style={[styles.text, { color: t[m.ink] }]}>{m.short}</Text>
     </View>
   );
 }
