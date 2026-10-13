@@ -2,9 +2,10 @@
 // (AI, signed-in users only), and Pin / Copy / Duplicate / Export actions.
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CopyIcon, CsvIcon, DuplicateIcon, ExportIcon, MarkdownIcon, PinIcon, TextIcon } from '@/components/Icons';
+import { CopyIcon, CsvIcon, DuplicateIcon, ExportIcon, LatexIcon, MarkdownIcon, PdfIcon, PinIcon, TextIcon } from '@/components/Icons';
 import { useAuth } from '@/features/auth/AuthContext';
 import { stepsFromPlan } from '@/features/calculator/math/aiSteps';
+import { hasCalculus } from '@/features/calculator/math/engine';
 import { explainSteps } from '@/services/ai';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -37,6 +38,8 @@ const EXPORT_FORMATS = [
   { key: 'csv', label: 'CSV', color: '#3d9c8b', Icon: CsvIcon },
   { key: 'text', label: 'Text', color: BLUE, Icon: TextIcon },
   { key: 'markdown', label: 'Markdown', color: '#727d8b', Icon: MarkdownIcon },
+  { key: 'latex', label: 'LaTeX', color: '#7a5cc4', Icon: LatexIcon },
+  { key: 'pdf', label: 'PDF', color: '#d0473f', Icon: PdfIcon },
 ];
 
 /** Row of export format buttons. */
@@ -55,8 +58,10 @@ export function ExportRow({ onExport }) {
 
 // Steps are shown when there is more than one operation to explain,
 // or hard arithmetic such as 489×73 or 7488÷24. "5+3" just shows its result.
+// ∫ and d/dx are numeric, so there are no steps that aiSteps could check.
 const needsSteps = (expr) =>
-  (expr.match(/[+−×÷^!²³⁻√∛(]/g) || []).length >= 2 || /\d{2,}[×÷]\d{2,}/.test(expr);
+  !hasCalculus(expr) &&
+  ((expr.match(/[+−×÷^!²³⁻√∛(]/g) || []).length >= 2 || /\d{2,}[×÷]\d{2,}/.test(expr));
 
 /**
  * Loads the steps when the panel opens: the AI plans the order and writes the
@@ -236,6 +241,6 @@ const styles = StyleSheet.create({
   actionText: { fontFamily: F.label, fontSize: 10 },
   exportWrap: { marginTop: 11, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(29,38,48,.1)' },
   exportRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  exportBtn: { alignItems: 'center', gap: 4, width: 70 },
+  exportBtn: { alignItems: 'center', gap: 4, width: 56 }, // five fit the 308px panel
   exportText: { fontFamily: F.labelBold, fontSize: 10 },
 });

@@ -101,6 +101,27 @@ export function MarkdownIcon({ size = 20, color }) {
   );
 }
 
+export function LatexIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M6.4 16.6 V6.4 A3 3 0 0 1 9.4 3.4" />
+      <Path d="M4.4 9.4 H10.6" />
+      <Path d="M12.4 8.6 L16.6 15.4" />
+      <Path d="M16.6 8.6 L12.4 15.4" />
+    </Svg>
+  );
+}
+
+export function PdfIcon({ size = 20, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.5)}>
+      <Path d="M4.6 2.8 H11.4 L15.8 7.2 V17.2 H4.6 Z" />
+      <Path d="M11.2 2.9 V7.4 H15.7" />
+      <Path d="M7.2 13.6 H12.4" strokeWidth={1.7} />
+    </Svg>
+  );
+}
+
 export function CameraIcon({ size = 17, color }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 1.7)}>
@@ -150,6 +171,16 @@ export function GearIcon({ size = 22, color }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 1.9)}>
       <Circle cx="12" cy="12" r="3" />
       <Path d="M10.4 3.2 L13.6 3.2 L14.1 5.6 L16.2 6.8 L18.5 6 L20.1 8.8 L18.3 10.4 L18.3 13.6 L20.1 15.2 L18.5 18 L16.2 17.2 L14.1 18.4 L13.6 20.8 L10.4 20.8 L9.9 18.4 L7.8 17.2 L5.5 18 L3.9 15.2 L5.7 13.6 L5.7 10.4 L3.9 8.8 L5.5 6 L7.8 6.8 L9.9 5.6 Z" />
+    </Svg>
+  );
+}
+
+/** + (New session). */
+export function PlusIcon({ size = 24, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 2.4)}>
+      <Path d="M12 5 V19" />
+      <Path d="M5 12 H19" />
     </Svg>
   );
 }

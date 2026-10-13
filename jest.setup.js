@@ -27,3 +27,4 @@ jest.mock('firebase/auth', () => ({
 }));
 
 jest.mock('firebase/firestore', () => ({}));
+jest.mock('expo-print', () => ({ printToFileAsync: jest.fn() }));
