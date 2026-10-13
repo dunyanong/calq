@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS = {
   // calculator memory, kept here so it survives a restart like on a Casio
   ans: 0,
   vars: { A: 0, B: 0, C: 0, D: 0, F: 0, M: 0 },
-  // New session (menu): the calculator screen shows calculations from this time on
+  // New session (+ in the calculator header): the calculator shows calculations from this time on
   sessionStart: 0,
 };
 

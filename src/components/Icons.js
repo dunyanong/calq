@@ -1,4 +1,4 @@
-// SVG icons copied path-for-path from the prototype.
+// SVG icons used across the app.
 import { Text, View } from 'react-native';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 

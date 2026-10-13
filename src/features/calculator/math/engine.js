@@ -131,7 +131,7 @@ const TOKENS = [
 
 const isDigit = (c) => c >= '0' && c <= '9';
 
-/** Adds the missing ")" at the end, like the prototype did. */
+/** Adds the missing ")" at the end. */
 export function closeParens(expr) {
   let depth = 0;
   for (const c of expr) {

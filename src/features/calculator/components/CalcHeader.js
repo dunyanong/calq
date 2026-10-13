@@ -9,7 +9,7 @@ import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
 
 function PinPill({ label, active, onPress }) {
-  // prototype calqPill: pops in with a small overshoot
+  // pops in with a small overshoot
   const [pop] = useState(() => new Animated.Value(0.6));
   useEffect(() => {
     Animated.spring(pop, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start();

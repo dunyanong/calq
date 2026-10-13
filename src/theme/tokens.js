@@ -1,6 +1,4 @@
-// Colour tokens copied from the prototype.
-// Light/dark app tokens come from "CalcMaster Menu"; calculator display and
-// keypad colours come from "Scientific Calculator".
+// Colour tokens: the light and dark app themes, and the calculator keypad (pad).
 
 const ACCENT_LIGHT = '#2a7093';
 export const ACCENT_DARK = '#7cbfe4';
