@@ -1,8 +1,9 @@
 // Modal shown when a calculation is held: result, step-by-step workings
 // (AI, signed-in users only), and Pin / Copy / Duplicate / Export actions.
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { angleMode } from '@/components/AngleBadge';
+import Popup from '@/components/Popup';
 import { CopyIcon, CsvIcon, DuplicateIcon, ExportIcon, LatexIcon, MarkdownIcon, PdfIcon, PinIcon, TextIcon } from '@/components/Icons';
 import { useAuth } from '@/features/auth/AuthContext';
 import { stepsFromPlan } from '@/features/calculator/math/aiSteps';
@@ -59,7 +60,7 @@ export function ExportRow({ onExport }) {
 
 // Steps are shown when there is more than one operation to explain,
 // or hard arithmetic such as 489×73 or 7488÷24. "5+3" just shows its result.
-// ∫ and d/dx are numeric, so there are no steps that aiSteps could check.
+// ∫, d/dx, Σ and Π get no steps: aiSteps cannot check workings for them.
 const needsSteps = (expr) =>
   !hasCalculus(expr) &&
   ((expr.match(/[+−×÷^!²³⁻√∛(]/g) || []).length >= 2 || /\d{2,}[×÷]\d{2,}/.test(expr));
@@ -127,69 +128,48 @@ function StepsStatus({ state, onRetry }) {
 function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
   const { user } = useAuth();
   const [exportOpen, setExportOpen] = useState(false);
-  const [anim] = useState(() => new Animated.Value(0));
   const [state, load] = useSteps(it, !!user);
-
-  // prototype calqPanel: scale up from .9 with a slight overshoot
-  useEffect(() => {
-    Animated.spring(anim, { toValue: 1, friction: 7, tension: 90, useNativeDriver: true }).start();
-  }, [anim]);
 
   const pinColor = it.pinned ? BLUE : t.panelAction;
 
   return (
-    <Animated.View
-      style={[
-        styles.panel,
-        {
-          backgroundColor: t.panelBg,
-          opacity: anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
-          transform: [
-            { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
-            { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
-          ],
-        },
-      ]}
-    >
-      {/* Inner Pressable swallows taps so they don't close the panel */}
-      <Pressable onPress={() => {}}>
-        <View style={styles.head}>
-          <Text style={[styles.expr, { color: t.panelInk }]}>{it.expr}</Text>
-          <Text style={[styles.res, { color: t.panelInk }]}>= {it.result}</Text>
-          <Text style={styles.angle}>{angleMode(it.angle).long}</Text>
+    <>
+      <View style={styles.head}>
+        <Text style={[styles.expr, { color: t.panelInk }]}>{it.expr}</Text>
+        <Text style={[styles.res, { color: t.panelInk }]}>= {it.result}</Text>
+        <Text style={styles.angle}>{angleMode(it.angle).long}</Text>
+      </View>
+      {state.status !== 'simple' && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
+      {state.status === 'done' ? (
+        <ScrollView style={styles.stepsScroll} contentContainerStyle={styles.steps}>
+          {state.steps.map((s, i) => (
+            <Step key={i} step={s} index={i} t={t} />
+          ))}
+        </ScrollView>
+      ) : (
+        state.status !== 'simple' && <StepsStatus state={state} onRetry={load} />
+      )}
+      <View style={styles.sep} />
+      <View style={styles.actions}>
+        <Action label={it.pinned ? 'Pinned' : 'Pin'} color={pinColor} dim={exportOpen} onPress={onPin}>
+          <PinIcon color={pinColor} filled={it.pinned} />
+        </Action>
+        <Action label="Copy" color={t.panelAction} dim={exportOpen} onPress={onCopy}>
+          <CopyIcon color={t.panelAction} />
+        </Action>
+        <Action label="Duplicate" color={t.panelAction} dim={exportOpen} onPress={onDuplicate}>
+          <DuplicateIcon color={t.panelAction} />
+        </Action>
+        <Action label="Export" color={exportOpen ? BLUE : t.panelAction} onPress={() => setExportOpen((o) => !o)}>
+          <ExportIcon color={exportOpen ? BLUE : t.panelAction} />
+        </Action>
+      </View>
+      {exportOpen && (
+        <View style={styles.exportWrap}>
+          <ExportRow onExport={onExport} />
         </View>
-        {state.status !== 'simple' && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
-        {state.status === 'done' ? (
-          <ScrollView style={styles.stepsScroll} contentContainerStyle={styles.steps}>
-            {state.steps.map((s, i) => (
-              <Step key={i} step={s} index={i} t={t} />
-            ))}
-          </ScrollView>
-        ) : (
-          state.status !== 'simple' && <StepsStatus state={state} onRetry={load} />
-        )}
-        <View style={styles.sep} />
-        <View style={styles.actions}>
-          <Action label={it.pinned ? 'Pinned' : 'Pin'} color={pinColor} dim={exportOpen} onPress={onPin}>
-            <PinIcon color={pinColor} filled={it.pinned} />
-          </Action>
-          <Action label="Copy" color={t.panelAction} dim={exportOpen} onPress={onCopy}>
-            <CopyIcon color={t.panelAction} />
-          </Action>
-          <Action label="Duplicate" color={t.panelAction} dim={exportOpen} onPress={onDuplicate}>
-            <DuplicateIcon color={t.panelAction} />
-          </Action>
-          <Action label="Export" color={exportOpen ? BLUE : t.panelAction} onPress={() => setExportOpen((o) => !o)}>
-            <ExportIcon color={exportOpen ? BLUE : t.panelAction} />
-          </Action>
-        </View>
-        {exportOpen && (
-          <View style={styles.exportWrap}>
-            <ExportRow onExport={onExport} />
-          </View>
-        )}
-      </Pressable>
-    </Animated.View>
+      )}
+    </>
   );
 }
 
@@ -201,29 +181,14 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
  */
 export default function HoldPanel({ item, visible, session, t, onClose, ...actions }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose}>
-        {item && <PanelBody key={session} it={item} t={t} {...actions} />}
-      </Pressable>
-    </Modal>
+    <Popup visible={visible} session={session} t={t} onClose={onClose} style={styles.panel}>
+      {item && <PanelBody it={item} t={t} {...actions} />}
+    </Popup>
   );
 }
 
 const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: 'rgba(14,24,34,.55)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  panel: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 20,
-    paddingTop: 15,
-    paddingHorizontal: 16,
-    paddingBottom: 13,
-    shadowColor: 'rgb(5,14,24)',
-    shadowOpacity: 0.45,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 26 },
-    elevation: 24,
-  },
+  panel: { paddingTop: 15, paddingHorizontal: 16, paddingBottom: 13 },
   head: { alignItems: 'flex-end', gap: 2 },
   expr: { fontFamily: F.mono, fontSize: 12.5, opacity: 0.55, textAlign: 'right' },
   res: { fontFamily: F.monoBold, fontSize: 23, letterSpacing: -0.4, textAlign: 'right' },

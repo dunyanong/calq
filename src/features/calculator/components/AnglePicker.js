@@ -1,10 +1,11 @@
 // Modal opened from the angle badge: pick degrees, radians or gradians, then OK.
 // Each unit shows one sine that comes out to exactly 1 in it and one that does not,
 // worked out by the engine so the examples can never disagree with the calculator.
-import { useEffect, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ANGLE_MODES, ANGLE_UNITS } from '@/components/AngleBadge';
 import { AngleIcon, CloseIcon } from '@/components/Icons';
+import Popup from '@/components/Popup';
 import { evaluate } from '@/features/calculator/math/engine';
 import { formatNumber } from '@/features/calculator/math/format';
 import { F } from '@/theme/fonts';
@@ -51,57 +52,39 @@ function UnitRow({ unit, selected, t, onPress }) {
 }
 
 function PickerBody({ angle, t, onClose, onChoose }) {
-  const [choice, setChoice] = useState(ANGLE_MODES[angle] ? angle : 'deg');
-  const [anim] = useState(() => new Animated.Value(0));
-
-  // same entrance as the hold panel
-  useEffect(() => {
-    Animated.spring(anim, { toValue: 1, friction: 7, tension: 90, useNativeDriver: true }).start();
-  }, [anim]);
+  const [choice, setChoice] = useState(angle);
 
   return (
-    <Animated.View
-      style={[
-        styles.panel,
-        {
-          backgroundColor: t.panelBg,
-          opacity: anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
-          transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }],
-        },
-      ]}
-    >
-      {/* swallows taps so they don't reach the scrim */}
-      <Pressable onPress={() => {}} accessibilityRole="radiogroup">
-        <View style={styles.head}>
-          <AngleIcon color={t.panelInk} />
-          <Text style={[styles.title, { color: t.panelInk }]} accessibilityRole="header">
-            Angle unit
-          </Text>
-          <Pressable
-            onPress={onClose}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            style={({ pressed }) => pressed && { opacity: 0.55 }}
-          >
-            <CloseIcon color={t.panelAction} />
-          </Pressable>
-        </View>
-        {ANGLE_UNITS.map((u) => (
-          <UnitRow key={u} unit={u} selected={u === choice} t={t} onPress={() => setChoice(u)} />
-        ))}
-        <View style={[styles.foot, { borderTopColor: t.displayRule }]}>
-          <Pressable
-            onPress={() => onChoose(choice)}
-            accessibilityRole="button"
-            accessibilityLabel="OK"
-            style={({ pressed }) => [styles.ok, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={styles.okText}>OK</Text>
-          </Pressable>
-        </View>
-      </Pressable>
-    </Animated.View>
+    <>
+      <View style={styles.head}>
+        <AngleIcon color={t.panelInk} />
+        <Text style={[styles.title, { color: t.panelInk }]} accessibilityRole="header">
+          Angle unit
+        </Text>
+        <Pressable
+          onPress={onClose}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          style={({ pressed }) => pressed && { opacity: 0.55 }}
+        >
+          <CloseIcon color={t.panelAction} />
+        </Pressable>
+      </View>
+      {ANGLE_UNITS.map((u) => (
+        <UnitRow key={u} unit={u} selected={u === choice} t={t} onPress={() => setChoice(u)} />
+      ))}
+      <View style={[styles.foot, { borderTopColor: t.displayRule }]}>
+        <Pressable
+          onPress={() => onChoose(choice)}
+          accessibilityRole="button"
+          accessibilityLabel="OK"
+          style={({ pressed }) => [styles.ok, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.okText}>OK</Text>
+        </Pressable>
+      </View>
+    </>
   );
 }
 
@@ -115,27 +98,14 @@ function PickerBody({ angle, t, onClose, onChoose }) {
  */
 export default function AnglePicker({ visible, session, angle, t, onClose, onChoose }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose}>
-        <PickerBody key={session} angle={angle} t={t} onClose={onClose} onChoose={onChoose} />
-      </Pressable>
-    </Modal>
+    <Popup visible={visible} session={session} t={t} onClose={onClose} style={styles.panel} accessibilityRole="radiogroup">
+      <PickerBody angle={angle} t={t} onClose={onClose} onChoose={onChoose} />
+    </Popup>
   );
 }
 
 const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: 'rgba(14,24,34,.55)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  panel: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: 'rgb(5,14,24)',
-    shadowOpacity: 0.45,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 26 },
-    elevation: 24,
-  },
+  panel: { maxWidth: 360, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 14 },
   title: { flex: 1, fontFamily: F.bodySemi, fontSize: 17 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 14, borderTopWidth: 1 },
