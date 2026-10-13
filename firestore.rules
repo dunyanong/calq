@@ -14,7 +14,7 @@ service cloud.firestore {
         && d.keys().hasAll(['expr', 'result', 'angle', 'pinned', 'createdAt', 'updatedAt'])
         && d.expr is string && d.expr.size() > 0 && d.expr.size() <= 200
         && d.result is string && d.result.size() > 0 && d.result.size() <= 200
-        && d.angle in ['deg', 'rad']
+        && d.angle in ['deg', 'rad', 'grad']
         && d.pinned is bool
         && d.createdAt is int
         && d.updatedAt is int;

@@ -60,6 +60,9 @@ const llm = (model, messages, maxTokens, temperature = 0) =>
   chatJson({ baseUrl: LLM_BASE_URL.value(), apiKey: LLM_API_KEY.value(), model, messages, maxTokens, temperature });
 
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Angle units the app knows (src/components/AngleBadge.js); anything else is read as degrees.
+const ANGLES = ['deg', 'rad', 'grad'];
+const angleOf = (v) => (ANGLES.includes(v) ? v : 'deg');
 
 export const scanEquation = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
@@ -89,7 +92,7 @@ export const scanEquation = onCall(OPTS, async (request) => {
 export const explainSteps = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
   const expr = request.data?.expr;
-  const angle = request.data?.angle === 'rad' ? 'rad' : 'deg';
+  const angle = angleOf(request.data?.angle);
   if (typeof expr !== 'string' || !expr.trim() || expr.length > MAX_EXPR) {
     throw new HttpsError('invalid-argument', 'Expected an expression');
   }
@@ -118,7 +121,7 @@ export const explainSteps = onCall(OPTS, async (request) => {
 export const integrateFormula = onCall(OPTS, async (request) => {
   const uid = requireUser(request);
   const f = request.data?.f;
-  const angle = request.data?.angle === 'rad' ? 'rad' : 'deg';
+  const angle = angleOf(request.data?.angle);
   if (typeof f !== 'string' || !f.trim() || f.length > MAX_EXPR) {
     throw new HttpsError('invalid-argument', 'Expected a function of x');
   }
