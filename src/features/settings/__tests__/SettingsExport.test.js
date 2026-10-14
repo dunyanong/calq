@@ -1,4 +1,4 @@
-// Settings → Export: the AI study notes switch and the Google Drive connection.
+// Settings → AI integration (the AI switch) and Google Drive.
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -49,23 +49,35 @@ beforeEach(async () => {
   global.fetch = jest.fn();
 });
 
-test('guests are asked to sign in for AI notes and Drive', async () => {
+test('guests are asked to sign in for AI features and Drive', async () => {
   mockAuthUser = null;
   await openSettings();
-  expect(screen.getByText('Sign in to use AI study notes')).toBeTruthy();
+  expect(screen.getByText('AI INTEGRATION')).toBeTruthy();
+  expect(screen.getByText('GOOGLE DRIVE')).toBeTruthy();
+  expect(screen.queryByText('EXPORT')).toBeNull();
+  expect(screen.getByText('Sign in to get AI help')).toBeTruthy();
   expect(screen.getByText('Sign in with Google to save exports to your Drive')).toBeTruthy();
-  fireEvent.press(screen.getByText('AI study notes'));
-  expect(screen.getAllByText('Sign in to use AI study notes')).toHaveLength(2); // + the toast
-  expect((await saved())?.aiNotes ?? false).toBe(false);
+  expect(screen.getByRole('switch').props.accessibilityState).toEqual({ checked: false, disabled: true });
+  fireEvent.press(screen.getByText('AI help'));
+  expect(screen.getAllByText('Sign in to get AI help')).toHaveLength(2); // + the toast
+  expect(await saved()).toBeNull(); // nothing changed
 });
 
-test('the AI study notes switch is saved', async () => {
+test('the AI switch starts on, says what AI help does, and is saved', async () => {
   await openSettings();
-  expect(screen.getByText(/become study notes with explanations and checked workings/)).toBeTruthy();
-  await act(async () => fireEvent.press(screen.getByText('AI study notes')));
-  expect((await saved()).aiNotes).toBe(true);
-  await act(async () => fireEvent.press(screen.getByText('AI study notes')));
-  expect((await saved()).aiNotes).toBe(false);
+  expect(screen.getByRole('switch').props.accessibilityState).toEqual({ checked: true, disabled: false });
+  expect(screen.getByText('Solve a problem from a photo')).toBeTruthy();
+  expect(screen.getByText('Your calculations are sent to an AI service to do this.')).toBeTruthy();
+
+  await act(async () => fireEvent.press(screen.getByText('AI help')));
+  expect((await saved()).ai).toBe(false);
+  expect(screen.getByText('AI help is off')).toBeTruthy();
+  expect(screen.getByText('Off · Calq works as a plain calculator')).toBeTruthy();
+  expect(screen.queryByText('Solve a problem from a photo')).toBeNull();
+
+  await act(async () => fireEvent.press(screen.getByText('AI help')));
+  expect((await saved()).ai).toBe(true);
+  expect(screen.getByText('AI help is on')).toBeTruthy();
 });
 
 test('connect Google Drive, pick a folder, disconnect', async () => {

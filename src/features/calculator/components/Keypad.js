@@ -93,6 +93,7 @@ function ToolButton({ onPress, onLongPress, label, children }) {
  * @param {() => void} p.onAnglePress  the angle chip was tapped (opens the angle unit picker)
  * @param {(key) => void} p.onKey
  * @param {(dir: -1|1, jump: boolean) => void} p.onCursor   ◀ ▶ (long-press jumps to the start / end)
+ * @param {(() => void)|null} p.onScan  the camera key; null hides it (AI off)
  * @param {boolean} p.hidden          keypad collapsed to its handle
  * @param {(hidden: boolean) => void} p.onHiddenChange
  * @param {number} p.bottomInset     safe-area space below the footer
@@ -213,9 +214,11 @@ export default function Keypad({
         <ToolButton label="Cursor right" onPress={() => onCursor(1, false)} onLongPress={() => onCursor(1, true)}>
           <ChevronRight color={pad.scanInk} />
         </ToolButton>
-        <ToolButton label="Scan a calculation" onPress={onScan}>
-          <CameraIcon color={pad.scanInk} />
-        </ToolButton>
+        {onScan && (
+          <ToolButton label="Scan a calculation" onPress={onScan}>
+            <CameraIcon color={pad.scanInk} />
+          </ToolButton>
+        )}
       </View>
 
       <View style={styles.pager} onLayout={onPagerLayout}>

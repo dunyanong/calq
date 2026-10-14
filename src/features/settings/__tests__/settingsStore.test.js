@@ -22,15 +22,23 @@ test.each(['turn', null, 7])('an unknown angle unit (%p) falls back to degrees',
 });
 
 test('export settings: unknown or malformed values fall back to the defaults', async () => {
-  await saved({ exportTo: 'ftp', aiNotes: 'yes', drive: { uid: 'u1' } });
+  await saved({ exportTo: 'ftp', ai: 'yes', drive: { uid: 'u1' } });
   const s = await loadSettings();
   expect(s.exportTo).toBe('share');
-  expect(s.aiNotes).toBe(false);
+  expect(s.ai).toBe(true);
   expect(s.drive).toBeNull();
 });
 
-test('a connected Drive and the AI notes switch are kept', async () => {
+test('AI is on unless it was turned off; the old AI notes switch is dropped', async () => {
+  expect((await loadSettings()).ai).toBe(true);
+  await saved({ ai: false, aiNotes: true });
+  const s = await loadSettings();
+  expect(s.ai).toBe(false);
+  expect(s).not.toHaveProperty('aiNotes');
+});
+
+test('a connected Drive and the AI switch are kept', async () => {
   const drive = { uid: 'u1', email: 'a@example.com', folderId: 'f1', folderName: 'Calq' };
-  await saved({ exportTo: 'drive', aiNotes: true, drive });
-  expect(await loadSettings()).toMatchObject({ exportTo: 'drive', aiNotes: true, drive });
+  await saved({ exportTo: 'drive', ai: false, drive });
+  expect(await loadSettings()).toMatchObject({ exportTo: 'drive', ai: false, drive });
 });

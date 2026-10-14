@@ -29,7 +29,7 @@ const LLM_BASE_URL = defineString('LLM_BASE_URL', { default: 'https://openrouter
 const OCR_MODEL = defineString('OCR_MODEL', { default: 'qwen/qwen3-vl-235b-a22b-instruct' });
 const STEPS_MODEL = defineString('STEPS_MODEL', { default: 'qwen/qwen3-235b-a22b-2507' });
 const SCANS_PER_DAY = defineInt('SCANS_PER_DAY', { default: 30 });
-// Steps load on every hold of a complicated calculation (cached per session in the app).
+// Steps load when the AI button in the hold panel is tapped (cached per session in the app).
 const STEPS_PER_DAY = defineInt('STEPS_PER_DAY', { default: 200 });
 const INTEGRALS_PER_DAY = defineInt('INTEGRALS_PER_DAY', { default: 50 });
 // One per AI study-notes export (each export makes up to 5 model calls).

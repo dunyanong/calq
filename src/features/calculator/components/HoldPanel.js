@@ -1,12 +1,12 @@
-// Modal shown when a calculation is held: result, step-by-step workings
-// (AI, signed-in users only), and Pin / Copy / Duplicate / Export actions.
+// Modal shown when a calculation is held: result, step-by-step workings on request
+// (the AI button, when AI is on), and Pin / Copy / Duplicate / Export actions.
 import { useCallback, useEffect, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { angleMode } from '@/components/AngleBadge';
 import { Skeleton, SkeletonGroup } from '@/components/Loader';
 import Popup from '@/components/Popup';
-import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon } from '@/components/Icons';
-import { useAuth } from '@/features/auth/AuthContext';
+import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon, SparkleIcon } from '@/components/Icons';
+import useAiOn from '@/features/ai/useAiOn';
 import { needsSteps, stepsFromPlan } from '@/features/calculator/math/aiSteps';
 import ExportRow from '@/features/export/ExportRow';
 import { explainSteps } from '@/services/ai';
@@ -38,14 +38,14 @@ function Action({ label, color, dim, onPress, children }) {
 }
 
 /**
- * Loads the steps when the panel opens: the AI plans the order and writes the
- * notes, aiSteps computes and checks every value. A plan that fails the check
+ * Loads the steps when the AI button is tapped: the AI plans the order and writes
+ * the notes, aiSteps computes and checks every value. A plan that fails the check
  * is never shown.
- * status: 'simple' | 'guest' | 'loading' | 'done' | 'rejected' | 'error'
+ * status: 'none' (AI off, or nothing to explain) | 'idle' | 'loading' | 'done' | 'rejected' | 'error'
  */
-function useSteps(it, signedIn) {
+function useSteps(it, aiOn) {
   const wanted = needsSteps(it.expr);
-  const [state, setState] = useState({ status: 'loading', steps: null, error: '' });
+  const [state, setState] = useState({ status: 'idle', steps: null, error: '' });
 
   const load = useCallback(
     async (retry = false) => {
@@ -61,12 +61,7 @@ function useSteps(it, signedIn) {
     [it.expr, it.result, it.angle],
   );
 
-  useEffect(() => {
-    if (wanted && signedIn) load();
-  }, [wanted, signedIn, load]);
-
-  if (!wanted) return [{ status: 'simple' }, load];
-  if (!signedIn) return [{ status: 'guest' }, load];
+  if (!wanted || !aiOn) return [{ status: 'none' }, load];
   return [state, load];
 }
 
@@ -93,13 +88,6 @@ function StepsSkeleton({ t }) {
 
 function StepsStatus({ state, t, onRetry }) {
   if (state.status === 'loading') return <StepsSkeleton t={t} />;
-  if (state.status === 'guest') {
-    return (
-      <View style={styles.statusRow}>
-        <Text style={styles.statusText}>Sign in to see steps</Text>
-      </View>
-    );
-  }
   return (
     <View style={styles.statusRow}>
       <Text style={styles.statusText}>{state.error}</Text>
@@ -111,21 +99,41 @@ function StepsStatus({ state, t, onRetry }) {
   );
 }
 
+/** ✦ AI, top left of the panel: asks for the workings. */
+function AiButton({ t, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="AI explanation"
+      style={({ pressed }) => [styles.aiBtn, { backgroundColor: t.selBg, opacity: pressed ? 0.6 : 1 }]}
+    >
+      <SparkleIcon color={BLUE} size={11} />
+      <Text style={styles.aiText}>AI</Text>
+    </Pressable>
+  );
+}
+
 function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
-  const { user } = useAuth();
+  const aiOn = useAiOn();
   const [exportOpen, setExportOpen] = useState(false);
-  const [state, load] = useSteps(it, !!user);
+  const [state, load] = useSteps(it, aiOn);
+  const shown = state.status !== 'none' && state.status !== 'idle'; // the steps area under the result
 
   const pinColor = it.pinned ? BLUE : t.panelAction;
 
   return (
     <>
-      <View style={styles.head}>
-        <Text style={[styles.expr, { color: t.panelInk }]}>{it.expr}</Text>
-        <Text style={[styles.res, { color: t.panelInk }]}>= {it.result}</Text>
-        <Text style={styles.angle}>{angleMode(it.angle).long}</Text>
+      <View style={styles.top}>
+        <View style={styles.aiSlot}>{state.status === 'idle' && <AiButton t={t} onPress={() => load()} />}</View>
+        <View style={styles.head}>
+          <Text style={[styles.expr, { color: t.panelInk }]}>{it.expr}</Text>
+          <Text style={[styles.res, { color: t.panelInk }]}>= {it.result}</Text>
+          <Text style={styles.angle}>{angleMode(it.angle).long}</Text>
+        </View>
       </View>
-      {state.status !== 'simple' && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
+      {shown && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
       {state.status === 'done' ? (
         <ScrollView style={styles.stepsScroll} contentContainerStyle={styles.steps}>
           {state.steps.map((s, i) => (
@@ -133,7 +141,7 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
           ))}
         </ScrollView>
       ) : (
-        state.status !== 'simple' && <StepsStatus state={state} t={t} onRetry={load} />
+        shown && <StepsStatus state={state} t={t} onRetry={load} />
       )}
       <View style={styles.sep} />
       <View style={styles.actions}>
@@ -175,7 +183,11 @@ export default function HoldPanel({ item, visible, session, t, onClose, ...actio
 
 const styles = StyleSheet.create({
   panel: { paddingTop: 15, paddingHorizontal: 16, paddingBottom: 13 },
-  head: { alignItems: 'flex-end', gap: 2 },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  aiSlot: { minWidth: 0 },
+  aiBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 9 },
+  aiText: { fontFamily: F.labelBold, fontSize: 11.5, color: BLUE, letterSpacing: 0.4 },
+  head: { flex: 1, minWidth: 0, alignItems: 'flex-end', gap: 2 },
   expr: { fontFamily: F.mono, fontSize: 12.5, opacity: 0.55, textAlign: 'right' },
   res: { fontFamily: F.monoBold, fontSize: 23, letterSpacing: -0.4, textAlign: 'right' },
   angle: { fontFamily: F.labelBold, fontSize: 9.5, letterSpacing: 0.6, color: '#93958f' },

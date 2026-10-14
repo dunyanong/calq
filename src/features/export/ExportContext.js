@@ -1,15 +1,17 @@
-// Runs exports for the hold panel and the History screen.
+// Runs exports for the hold panel, the calculator's selection and the History screen.
 //   format     csv / text / markdown / latex / pdf (the export row)
-//   AI notes   Settings → AI study notes: Markdown, LaTeX and PDF become study notes
-//              (studyNotes.js); off, or for CSV and Text, the export is unchanged
+//   AI notes   with AI on (Settings → AI integration), Markdown, LaTeX and PDF ask
+//              "Include AI explanation?" and can become study notes (studyNotes.js);
+//              AI off, or CSV and Text, export only the calculations, without asking
 //   to         the share sheet, or the connected Google Drive folder (services/drive.js)
 // One export at a time, with a progress pill while the AI or Drive is working.
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Loader from '@/components/Loader';
 import { useToast } from '@/components/Toast';
+import useAiOn from '@/features/ai/useAiOn';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
 import { FORMATS, exportContent, formatDate, shareFile, writeExportFile } from '@/features/history/exportHistory';
@@ -22,6 +24,7 @@ import { AI_FORMATS, makeStudyNotes } from './studyNotes';
 // Outside the provider (component tests): plain exports through the share sheet.
 const ExportContext = createContext({
   run: () => {},
+  exportItems: () => {},
   ai: false,
   drive: null,
   destination: 'share',
@@ -85,6 +88,7 @@ function ProgressPill({ phase, bottom, onCancel }) {
 export function ExportProvider({ children }) {
   const settings = useSettings();
   const { user } = useAuth();
+  const ai = useAiOn();
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -94,7 +98,6 @@ export function ExportProvider({ children }) {
   // Drive belongs to the Calq user who connected it
   const drive = user && settings.drive?.uid === user.uid ? settings.drive : null;
   const destination = drive && settings.exportTo === 'drive' ? 'drive' : 'share';
-  const ai = !!user && settings.aiNotes;
 
   /** Starts a job; returns live() (false once cancelled or replaced), or null if one is running. */
   const begin = (first) => {
@@ -145,11 +148,10 @@ export function ExportProvider({ children }) {
 
   /**
    * Exports items (oldest first) in format to the chosen destination.
-   * @param {{plain?: boolean}} [opts]  plain: no AI notes (after they failed)
+   * @param {{notes?: boolean}} [opts]  notes: as AI study notes (Markdown, LaTeX and PDF, AI on)
    */
-  const run = async (items, format, { plain = false } = {}) => {
-    const notesWanted = !plain && settings.aiNotes && AI_FORMATS.includes(format);
-    const notes = notesWanted && !!user;
+  const run = async (items, format, opts = {}) => {
+    const notes = !!opts.notes && ai && AI_FORMATS.includes(format);
     const live = begin(notes ? 'notes' : destination === 'drive' ? 'drive' : null);
     if (!live) return;
     let file;
@@ -159,7 +161,7 @@ export function ExportProvider({ children }) {
         try {
           content = notesContent(await makeStudyNotes(items, { onPhase: (p) => live() && setPhase(p) }), format);
         } catch (e) {
-          const exportPlain = { label: 'Export plain', onPress: () => run(items, format, { plain: true }) };
+          const exportPlain = { label: 'Export plain', onPress: () => run(items, format) };
           if (live()) toast('Study notes failed: ' + e.message, { action: exportPlain });
           return;
         }
@@ -172,7 +174,6 @@ export function ExportProvider({ children }) {
       if (destination === 'share') {
         setPhase(null); // the share sheet takes over
         await shareFile(file, format);
-        if (notesWanted && !notes) toast('Sign in to get AI study notes');
         return;
       }
     } catch (e) {
@@ -184,8 +185,30 @@ export function ExportProvider({ children }) {
     return saveToDrive(file, format, notes); // a job of its own, so Retry can run just this part
   };
 
+  /**
+   * The export row's tap: with AI on, Markdown, LaTeX and PDF first ask whether to add an AI explanation.
+   * @param {() => void} [onGo]  runs once the export starts (not on Cancel), e.g. to close the panel
+   *                             it was picked in; the question shows over that panel
+   */
+  const exportItems = (items, format, onGo) => {
+    const go = (opts) => {
+      onGo?.();
+      run(items, format, opts);
+    };
+    if (!ai || !AI_FORMATS.includes(format)) {
+      go();
+      return;
+    }
+    Alert.alert('Include AI explanation?', 'Adds study notes with explanations and checked workings. Uses AI credits.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Calculation only', onPress: () => go() },
+      { text: 'With AI explanation', onPress: () => go({ notes: true }) },
+    ]);
+  };
+
   const value = {
     run,
+    exportItems,
     ai,
     drive,
     destination,
@@ -200,7 +223,7 @@ export function ExportProvider({ children }) {
   );
 }
 
-/** const exporter = useExport(); exporter.run(items, 'pdf') */
+/** const exporter = useExport(); exporter.exportItems(items, 'pdf') */
 export function useExport() {
   return useContext(ExportContext);
 }

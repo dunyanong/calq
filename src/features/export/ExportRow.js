@@ -1,5 +1,5 @@
 // Export buttons (hold panel and History screen): where to send it when Google Drive
-// is connected, then one tap per format. ✦ marks the formats that become AI study notes.
+// is connected, then one tap per format. With AI on, ✦ marks the formats that can include an AI explanation.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CsvIcon, DriveIcon, LatexIcon, MarkdownIcon, PdfIcon, SparkleIcon, TextIcon } from '@/components/Icons';
 import { F } from '@/theme/fonts';
@@ -57,7 +57,7 @@ export default function ExportRow({ onExport, t }) {
               key={key}
               onPress={() => onExport(key)}
               accessibilityRole="button"
-              accessibilityLabel={label + (notes ? ' study notes' : '')}
+              accessibilityLabel={label + (notes ? ', can include an AI explanation' : '')}
               style={({ pressed }) => [styles.exportBtn, { opacity: pressed ? 0.6 : 1 }]}
             >
               <View>
@@ -76,7 +76,7 @@ export default function ExportRow({ onExport, t }) {
       {ai && (
         <View style={styles.aiHint}>
           <SparkleIcon color={BLUE} size={10} />
-          <Text style={[styles.aiText, { color: t.sub }]}>Markdown, LaTeX and PDF export as AI study notes</Text>
+          <Text style={[styles.aiText, { color: t.sub }]}>Markdown, LaTeX and PDF can include an AI explanation</Text>
         </View>
       )}
     </View>

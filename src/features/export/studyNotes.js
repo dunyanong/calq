@@ -1,4 +1,4 @@
-// AI study notes for the export (Settings → AI study notes).
+// AI study notes for the export ("Include AI explanation?" → With AI explanation).
 //
 // Same rule as the rest of the app: the model writes only prose. The workings come
 // from stepsFromPlan, which recomputes every value with math.js; results come from

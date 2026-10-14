@@ -1,4 +1,4 @@
-// Settings screen: account, angle unit, output format, appearance, export (AI study notes, Google Drive).
+// Settings screen: account, angle unit, output format, appearance, AI integration (the AI switch), Google Drive.
 import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,14 +8,22 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { ANGLE_MODES, ANGLE_UNITS } from '@/components/AngleBadge';
 import Segmented from '@/components/Segmented';
 import Switch from '@/components/Switch';
-import { DriveIcon, GoogleG, SparkleIcon } from '@/components/Icons';
+import { CameraIcon, DriveIcon, ExportIcon, GoogleG, SparkleIcon } from '@/components/Icons';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import DriveFolderPicker from '@/features/export/DriveFolderPicker';
 import * as Drive from '@/services/drive';
 import { useSettings } from './SettingsContext';
+import { tick } from '@/features/calculator/components/KeyButton';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
+
+// What AI help does, in the user's words (shown while it is on).
+const AI_PERKS = [
+  { Icon: CameraIcon, text: 'Solve a problem from a photo' },
+  { Icon: SparkleIcon, text: 'Explain answers step by step' },
+  { Icon: ExportIcon, text: 'Add study notes when you export' },
+];
 
 function Section({ title, t }) {
   return <Text style={[styles.section, { color: t.sub }]}>{title}</Text>;
@@ -159,7 +167,7 @@ function DriveCard({ t, user }) {
 }
 
 export default function Settings() {
-  const { theme: t, angle, output, dark, aiNotes, update } = useSettings();
+  const { theme: t, angle, output, dark, ai, update } = useSettings();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user, signIn, signOut } = useAuth();
@@ -179,6 +187,17 @@ export default function Settings() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const aiOn = !!user && ai;
+  const toggleAi = () => {
+    if (!user) {
+      toast('Sign in to get AI help');
+      return;
+    }
+    tick();
+    update({ ai: !ai });
+    toast(ai ? 'AI help is off' : 'AI help is on');
   };
 
   const name = user ? user.displayName || 'Signed in' : 'Guest';
@@ -245,29 +264,41 @@ export default function Settings() {
           </Pressable>
         </Card>
 
-        <Section title="EXPORT" t={t} />
+        <Section title="AI INTEGRATION" t={t} />
         <Card t={t}>
           <Pressable
-            onPress={() => (user ? update({ aiNotes: !aiNotes }) : toast('Sign in to use AI study notes'))}
+            onPress={toggleAi}
             accessibilityRole="switch"
-            accessibilityState={{ checked: !!user && aiNotes, disabled: !user }}
+            accessibilityState={{ checked: !!user && ai, disabled: !user }}
             style={[styles.switchRow, !user && { opacity: 0.5 }]}
           >
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={styles.aiTitle}>
-                <SparkleIcon color={BLUE} size={13} />
-                <Text style={[styles.rowTitle, { color: t.text }]}>AI study notes</Text>
+                <SparkleIcon color={aiOn ? BLUE : t.sub} size={13} />
+                <Text style={[styles.rowTitle, { color: t.text }]}>AI help</Text>
               </View>
               <Text style={[styles.rowSub, { color: t.sub }]}>
-                {user
-                  ? 'PDF, LaTeX and Markdown exports become study notes with explanations and checked workings. Calculations are sent to the AI service.'
-                  : 'Sign in to use AI study notes'}
+                {!user ? 'Sign in to get AI help' : aiOn ? 'On' : 'Off · Calq works as a plain calculator'}
               </Text>
             </View>
-            <Switch on={!!user && aiNotes} trackOn={t.accent} trackOff={t.switchTrack} />
+            <Switch on={aiOn} trackOn={t.accent} trackOff={t.switchTrack} />
           </Pressable>
+          {aiOn && (
+            <View style={[styles.perks, { borderTopColor: t.divider }]}>
+              {AI_PERKS.map(({ Icon, text }) => (
+                <View key={text} style={styles.perk}>
+                  <View style={[styles.perkIcon, { backgroundColor: t.selBg }]}>
+                    <Icon color={BLUE} size={15} />
+                  </View>
+                  <Text style={[styles.perkText, { color: t.text }]}>{text}</Text>
+                </View>
+              ))}
+              <Text style={[styles.perkNote, { color: t.sub }]}>Your calculations are sent to an AI service to do this.</Text>
+            </View>
+          )}
         </Card>
-        <View style={styles.gap} />
+
+        <Section title="GOOGLE DRIVE" t={t} />
         <DriveCard t={t} user={user} />
 
         <Pressable
@@ -307,7 +338,11 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 13, fontFamily: F.body, marginTop: 2 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, paddingHorizontal: 16 },
   aiTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  gap: { height: 12 },
+  perks: { gap: 10, borderTopWidth: 1, paddingTop: 12, paddingBottom: 14, paddingHorizontal: 16 },
+  perk: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  perkIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  perkText: { fontSize: 14.5, fontFamily: F.bodySemi, flexShrink: 1 },
+  perkNote: { fontSize: 12, fontFamily: F.body, marginTop: 2 },
   driveHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   ruled: { borderTopWidth: 1 },
   rowValue: { fontSize: 15, fontFamily: F.bodyBold, maxWidth: '60%' },

@@ -1,4 +1,5 @@
 // ∫ without limits for a signed-in user: the AI's answer is checked before it is shown.
+// With the AI switch off there is no formula and no scan key.
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
 
 // signed in, with cloud history stubbed out
@@ -35,7 +36,10 @@ async function typeIntegralOfXSquared() {
   await act(async () => press('='));
 }
 
-beforeEach(() => mockIntegrate.mockReset());
+beforeEach(async () => {
+  mockIntegrate.mockReset();
+  await require('@react-native-async-storage/async-storage').clear();
+});
 
 test('shows the checked formula with +C', async () => {
   mockIntegrate.mockResolvedValue('x^3/3');
@@ -58,4 +62,18 @@ test('network or quota errors are shown', async () => {
   mockIntegrate.mockRejectedValue(new Error('Daily limit reached, try again tomorrow'));
   await typeIntegralOfXSquared();
   expect(screen.getByText('Daily limit reached, try again tomorrow')).toBeTruthy();
+});
+
+test('AI on: the scan key is there', async () => {
+  renderRouter('./src/app');
+  await act(async () => {});
+  expect(screen.getByLabelText('Scan a calculation')).toBeTruthy();
+});
+
+test('AI off: no scan key, and ∫ without limits asks to turn AI on', async () => {
+  await require('@react-native-async-storage/async-storage').setItem('calq.settings', JSON.stringify({ ai: false }));
+  await typeIntegralOfXSquared();
+  expect(screen.queryByLabelText('Scan a calculation')).toBeNull();
+  expect(mockIntegrate).not.toHaveBeenCalled();
+  expect(screen.getByText('Turn on AI help in Settings to get a formula')).toBeTruthy();
 });

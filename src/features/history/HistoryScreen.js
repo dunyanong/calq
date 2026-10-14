@@ -111,8 +111,7 @@ export default function HistoryScreen() {
   const open = (item) => router.dismissTo({ pathname: '/', params: { recall: item.id } });
 
   const onExport = (format) => {
-    setExportOpen(false);
-    exporter.run(matching, format);
+    exporter.exportItems(matching, format, () => setExportOpen(false));
   };
 
   return (

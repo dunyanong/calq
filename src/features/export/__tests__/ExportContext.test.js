@@ -1,6 +1,7 @@
-// Export runs: AI study notes or the plain export, to the share sheet or Google Drive.
+// Export runs: AI study notes or the plain export, to the share sheet or Google Drive,
+// and the "Include AI explanation?" question when AI is on.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
@@ -40,7 +41,7 @@ let settings;
 function Probe() {
   api = useExport();
   settings = useSettings();
-  return <ExportRow t={light} onExport={(format) => api.run(items, format)} />;
+  return <ExportRow t={light} onExport={(format) => api.exportItems(items, format)} />;
 }
 
 async function setup(saved = {}, user = ADA) {
@@ -61,6 +62,7 @@ async function setup(saved = {}, user = ADA) {
 }
 
 const run = (format) => act(() => api.run(items, format));
+const runNotes = (format) => act(() => api.run(items, format, { notes: true }));
 const written = () => writeExportFile.mock.calls.map(([format, content, name]) => ({ format, content, name }));
 
 beforeEach(async () => {
@@ -69,7 +71,7 @@ beforeEach(async () => {
 });
 
 describe('share sheet', () => {
-  test('AI notes off: the plain export, unchanged', async () => {
+  test('without notes: the plain export, unchanged', async () => {
     await setup();
     await run('csv');
     expect(written()).toEqual([{ format: 'csv', content: toCSV(items), name: 'calq-history' }]);
@@ -77,10 +79,10 @@ describe('share sheet', () => {
     expect(studyNotes).not.toHaveBeenCalled();
   });
 
-  test('AI notes on: Markdown, LaTeX and PDF become study notes', async () => {
+  test('with notes: Markdown, LaTeX and PDF become study notes', async () => {
     studyNotes.mockResolvedValue(REPLY);
-    await setup({ aiNotes: true });
-    await run('markdown');
+    await setup();
+    await runNotes('markdown');
     const [file] = written();
     expect(file.name).toBe('calq-study-notes');
     expect(file.content).toContain('# Times tables and sines');
@@ -88,23 +90,23 @@ describe('share sheet', () => {
     expect(file.content).toContain('## All calculations');
     expect(shareFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'calq-study-notes' }), 'markdown');
 
-    await run('latex');
+    await runNotes('latex');
     expect(written()[1].content).toContain('\\subsection*{1.\\ Multiplying}');
-    await run('pdf');
+    await runNotes('pdf');
     expect(written()[2].content).toContain('<h2>1. Multiplying</h2>');
   });
 
-  test('AI notes on: CSV and Text stay as they are', async () => {
-    await setup({ aiNotes: true });
-    await run('csv');
+  test('with notes: CSV and Text stay as they are', async () => {
+    await setup();
+    await runNotes('csv');
     expect(written()[0]).toEqual({ format: 'csv', content: toCSV(items), name: 'calq-history' });
     expect(studyNotes).not.toHaveBeenCalled();
   });
 
   test('when the notes fail, the plain export is one tap away', async () => {
     studyNotes.mockRejectedValue(new Error('AI service unavailable, try again'));
-    await setup({ aiNotes: true });
-    await run('pdf');
+    await setup();
+    await runNotes('pdf');
     expect(screen.getByText('Study notes failed: AI service unavailable, try again')).toBeTruthy();
     expect(writeExportFile).not.toHaveBeenCalled();
 
@@ -114,21 +116,23 @@ describe('share sheet', () => {
     expect(shareFile).toHaveBeenCalledTimes(1);
   });
 
-  test('a guest with the switch still on gets the plain export and a hint', async () => {
-    await setup({ aiNotes: true }, null);
-    await run('latex');
+  test.each([
+    ['a guest', {}, null],
+    ['AI off', { ai: false }, ADA],
+  ])('%s never gets study notes', async (_, saved, user) => {
+    await setup(saved, user);
+    await runNotes('latex');
     expect(written()[0].name).toBe('calq-history');
     expect(studyNotes).not.toHaveBeenCalled();
-    expect(screen.getByText('Sign in to get AI study notes')).toBeTruthy();
   });
 
   test('Cancel drops the export, even when the notes arrive later; one export at a time', async () => {
     let finish;
     studyNotes.mockReturnValue(new Promise((resolve) => (finish = resolve)));
-    await setup({ aiNotes: true });
+    await setup();
     let pending;
     act(() => {
-      pending = api.run(items, 'pdf');
+      pending = api.run(items, 'pdf', { notes: true });
     });
     expect(await screen.findByText('Writing study notes…')).toBeTruthy();
     act(() => {
@@ -173,8 +177,8 @@ describe('Google Drive', () => {
 
   test('study notes go to Drive too, named as notes', async () => {
     studyNotes.mockResolvedValue(REPLY);
-    await setup({ aiNotes: true, exportTo: 'drive', drive: DRIVE });
-    await run('pdf');
+    await setup({ exportTo: 'drive', drive: DRIVE });
+    await runNotes('pdf');
     expect(upload.mock.calls[0][0]).toMatchObject({ name: expect.stringMatching(/^Calq study notes .*\.pdf$/), mimeType: 'application/pdf' });
   });
 
@@ -219,7 +223,7 @@ describe('export row', () => {
   test('without Drive: only the formats', async () => {
     await setup();
     expect(screen.queryByText('Send to')).toBeNull();
-    expect(screen.getByLabelText('PDF')).toBeTruthy();
+    expect(screen.getByText('PDF')).toBeTruthy();
   });
 
   test('with Drive: pick where to send it; the choice is remembered', async () => {
@@ -233,10 +237,67 @@ describe('export row', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  test('AI notes on: ✦ marks the formats that become notes', async () => {
-    await setup({ aiNotes: true });
-    expect(screen.getByLabelText('PDF study notes')).toBeTruthy();
+  test('AI on: ✦ marks the formats that can include an AI explanation', async () => {
+    await setup();
+    expect(screen.getByLabelText('PDF, can include an AI explanation')).toBeTruthy();
     expect(screen.getByLabelText('CSV')).toBeTruthy();
-    expect(screen.getByText('Markdown, LaTeX and PDF export as AI study notes')).toBeTruthy();
+    expect(screen.getByText('Markdown, LaTeX and PDF can include an AI explanation')).toBeTruthy();
+  });
+
+  test('AI off: no ✦ anywhere', async () => {
+    await setup({ ai: false });
+    expect(screen.getByLabelText('PDF')).toBeTruthy();
+    expect(screen.queryByText('Markdown, LaTeX and PDF can include an AI explanation')).toBeNull();
+  });
+});
+
+describe('Include AI explanation?', () => {
+  let alert;
+  beforeEach(() => {
+    alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    studyNotes.mockResolvedValue(REPLY);
+  });
+  afterEach(() => alert.mockRestore());
+
+  /** Taps the alert's button with this text. */
+  const answer = (text) => act(async () => alert.mock.calls[0][2].find((b) => b.text === text).onPress?.());
+
+  test('AI on: PDF asks first; With AI explanation makes study notes', async () => {
+    const onGo = jest.fn();
+    await setup();
+    act(() => api.exportItems(items, 'pdf', onGo));
+    expect(alert).toHaveBeenCalledWith('Include AI explanation?', expect.any(String), expect.any(Array));
+    expect(onGo).not.toHaveBeenCalled(); // the panel stays open under the question
+    await answer('With AI explanation');
+    expect(onGo).toHaveBeenCalled();
+    expect(written()[0].name).toBe('calq-study-notes');
+  });
+
+  test('Calculation only exports the plain file; Cancel exports nothing', async () => {
+    const onGo = jest.fn();
+    await setup();
+    act(() => api.exportItems(items, 'markdown', onGo));
+    await answer('Cancel');
+    expect(onGo).not.toHaveBeenCalled();
+    expect(writeExportFile).not.toHaveBeenCalled();
+
+    alert.mockClear();
+    act(() => api.exportItems(items, 'markdown', onGo));
+    await answer('Calculation only');
+    expect(written()[0].name).toBe('calq-history');
+    expect(studyNotes).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['CSV, AI on', {}, ADA, 'csv'],
+    ['PDF, AI off', { ai: false }, ADA, 'pdf'],
+    ['PDF, guest', {}, null, 'pdf'],
+  ])('%s: no question, only the calculations', async (_, saved, user, format) => {
+    const onGo = jest.fn();
+    await setup(saved, user);
+    await act(async () => api.exportItems(items, format, onGo));
+    expect(alert).not.toHaveBeenCalled();
+    expect(onGo).toHaveBeenCalled();
+    expect(written()[0]).toMatchObject({ format, name: 'calq-history' });
   });
 });

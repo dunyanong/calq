@@ -13,6 +13,7 @@ import { tick } from './components/KeyButton';
 import ScanSheet from '@/features/scan/ScanSheet';
 import { angleMode } from '@/components/AngleBadge';
 import { useToast } from '@/components/Toast';
+import useAiOn from '@/features/ai/useAiOn';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
 import { DEFAULT_SETTINGS } from '@/features/settings/settingsStore';
@@ -41,6 +42,7 @@ export default function Calculator() {
   const { theme: t, angle, output, ans, vars, sessionStart, update } = useSettings();
   const history = useHistory();
   const { user } = useAuth();
+  const aiOn = useAiOn();
   const toast = useToast();
   const exporter = useExport();
   const router = useRouter();
@@ -150,8 +152,8 @@ export default function Calculator() {
 
   /** ∫ without limits: the AI proposes F, math/symbolic.js checks F′ = f before it is shown. */
   const solveIntegral = async (expr, f) => {
-    if (!user) {
-      fail('Sign in to get a formula for ∫ without limits');
+    if (!aiOn) {
+      fail(user ? 'Turn on AI help in Settings to get a formula' : 'Sign in to get a formula for ∫ without limits');
       return;
     }
     setBusy(true);
@@ -304,13 +306,7 @@ export default function Calculator() {
   const openHold = useCallback((id) => setHeld((h) => ({ id, open: true, session: h.session + 1 })), []);
   const closeHold = () => setHeld((h) => ({ ...h, open: false }));
 
-  const openScan = () => {
-    if (!user) {
-      toast('Sign in from Settings to scan');
-      return;
-    }
-    setScan((s) => ({ open: true, session: s.session + 1 }));
-  };
+  const openScan = () => setScan((s) => ({ open: true, session: s.session + 1 })); // the camera key shows only with AI on
   const closeScan = () => setScan((s) => ({ ...s, open: false }));
 
   return (
@@ -351,7 +347,7 @@ export default function Calculator() {
           onCursor={moveCursor}
           onToggleShift={() => setMode((m) => (m === 'shift' ? null : 'shift'))}
           onToggleAlpha={() => setMode((m) => (m === 'alpha' ? null : 'alpha'))}
-          onScan={openScan}
+          onScan={aiOn ? openScan : null}
           hidden={kbHidden}
           onHiddenChange={setKbHidden}
           bottomInset={insets.bottom}
@@ -403,11 +399,7 @@ export default function Calculator() {
           toast('Duplicated');
           closeHold();
         }}
-        onExport={(format) => {
-          const item = heldItem;
-          closeHold();
-          exporter.run([item], format); // AI notes / Drive per Settings and the export row
-        }}
+        onExport={(format) => exporter.exportItems([heldItem], format, closeHold)} // asks about an AI explanation when AI is on
       />
     </View>
   );
