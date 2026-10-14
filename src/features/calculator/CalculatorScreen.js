@@ -1,6 +1,7 @@
-// Calculator screen: header, display, keypad, and the scan / angle / hold modals.
+// Calculator screen: header, display, keypad, the scan / angle / hold / export modals,
+// and selecting calculations to export together (hold → Select).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import DisplayPanel from './components/DisplayPanel';
 import Keypad from './components/Keypad';
 import HoldPanel from './components/HoldPanel';
 import AnglePicker from './components/AnglePicker';
+import ExportSheet from './components/ExportSheet';
 import { tick } from './components/KeyButton';
 import ScanSheet from '@/features/scan/ScanSheet';
 import { angleMode } from '@/components/AngleBadge';
@@ -58,6 +60,8 @@ export default function Calculator() {
   const [held, setHeld] = useState({ id: null, open: false, session: 0 });
   const [scan, setScan] = useState({ open: false, session: 0 });
   const [anglePicker, setAnglePicker] = useState({ open: false, session: 0 });
+  const [selected, setSelected] = useState(null); // Set of ids while selecting, else null
+  const [exportSheet, setExportSheet] = useState({ open: false, session: 0 });
   const [kbHidden, setKbHidden] = useState(false);
   const [bodyH, setBodyH] = useState(0);
   const [displayH] = useState(() => new Animated.Value(0));
@@ -70,6 +74,7 @@ export default function Calculator() {
   const shown = (filterOn ? pinned : sessionItems).slice(-MAX_CARDS);
   const heldItem = history.items.find((it) => it.id === held.id) || null;
   const lastItem = sessionItems[sessionItems.length - 1];
+  const selectedItems = selected ? history.items.filter((it) => selected.has(it.id)) : []; // oldest first
 
   // Display grows when the keypad is hidden.
   useEffect(() => {
@@ -306,6 +311,33 @@ export default function Calculator() {
   const openHold = useCallback((id) => setHeld((h) => ({ id, open: true, session: h.session + 1 })), []);
   const closeHold = () => setHeld((h) => ({ ...h, open: false }));
 
+  // Select in the hold panel starts selecting; then a tap adds or removes a card, like picking messages in a chat.
+  const startSelect = (id) => {
+    closeHold();
+    setSelected(new Set([id]));
+  };
+  const endSelect = () => setSelected(null);
+  const toggleSelect = useCallback(
+    (id) =>
+      setSelected((sel) => {
+        const next = new Set(sel);
+        if (!next.delete(id)) next.add(id);
+        return next.size ? next : null; // the last one deselected ends selecting
+      }),
+    [],
+  );
+
+  // Android back ends selecting first.
+  const selecting = selected !== null;
+  useEffect(() => {
+    if (!selecting) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setSelected(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [selecting]);
+
   const openScan = () => setScan((s) => ({ open: true, session: s.session + 1 })); // the camera key shows only with AI on
   const closeScan = () => setScan((s) => ({ ...s, open: false }));
 
@@ -317,6 +349,9 @@ export default function Calculator() {
         pinFilter={filterOn}
         onPinPill={() => setPinFilter(!filterOn)}
         onNewSession={newSession}
+        selected={selecting ? selectedItems.length : null}
+        onEndSelect={endSelect}
+        onExportSelected={() => setExportSheet((e) => ({ open: true, session: e.session + 1 }))}
       />
       <View style={styles.body} onLayout={(e) => setBodyH(e.nativeEvent.layout.height)}>
         <DisplayPanel
@@ -335,6 +370,8 @@ export default function Calculator() {
           heldId={held.open ? held.id : null}
           onHold={openHold}
           onRecall={recallItem}
+          selected={selected}
+          onToggle={toggleSelect}
           height={displayH}
           t={t}
         />
@@ -399,7 +436,22 @@ export default function Calculator() {
           toast('Duplicated');
           closeHold();
         }}
+        onSelect={() => startSelect(heldItem.id)}
         onExport={(format) => exporter.exportItems([heldItem], format, closeHold)} // asks about an AI explanation when AI is on
+      />
+
+      <ExportSheet
+        visible={exportSheet.open}
+        session={exportSheet.session}
+        count={selectedItems.length}
+        t={t}
+        onClose={() => setExportSheet((e) => ({ ...e, open: false }))}
+        onExport={(format) =>
+          exporter.exportItems(selectedItems, format, () => {
+            setExportSheet((e) => ({ ...e, open: false }));
+            endSelect();
+          })
+        }
       />
     </View>
   );

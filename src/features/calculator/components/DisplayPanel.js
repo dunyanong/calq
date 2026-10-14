@@ -1,4 +1,5 @@
-// Cream display: past calculations (tap one to edit it again, hold it to see workings) + entry line.
+// Cream display: past calculations (tap one to edit it again, hold it for its panel; while
+// selecting, a tap adds or removes it) + entry line.
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { F } from '@/theme/fonts';
@@ -8,7 +9,7 @@ import Loader from '@/components/Loader';
 import { BOX, boxLabel } from '@/features/calculator/math/entry';
 
 // Memoised: the entry changes on every key press, the cards do not.
-const HistoryCard = memo(function HistoryCard({ item, t, held, onHold, onRecall }) {
+const HistoryCard = memo(function HistoryCard({ item, t, held, selecting, selected, onHold, onRecall, onToggle }) {
   // fade + slide up when a card appears
   const [anim] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -22,19 +23,28 @@ const HistoryCard = memo(function HistoryCard({ item, t, held, onHold, onRecall 
       }}
     >
       <Pressable
-        onPress={() => onRecall(item)}
-        onLongPress={() => onHold(item.id)}
+        onPress={() => (selecting ? onToggle(item.id) : onRecall(item))}
+        onLongPress={() => (selecting ? onToggle(item.id) : onHold(item.id))}
         delayLongPress={300}
-        accessibilityRole="button"
-        accessibilityHint="Tap to edit it again, hold for workings"
+        accessibilityRole={selecting ? 'checkbox' : 'button'}
+        accessibilityState={selecting ? { checked: selected } : undefined}
+        accessibilityHint={selecting ? 'Tap to select or deselect' : 'Tap to edit it again, hold for more'}
         style={[
           styles.card,
           item.pinned && { backgroundColor: t.pinnedRowBg },
-          held && { borderColor: BLUE },
+          selected && { backgroundColor: t.selBg },
+          (held || selected) && { borderColor: BLUE },
         ]}
       >
         <View style={styles.head}>
-          <AngleBadge angle={item.angle} t={t} />
+          <View style={styles.badges}>
+            {selecting && (
+              <View style={[styles.check, selected ? styles.checkOn : { borderColor: t.displayRule }]}>
+                {selected && <Text style={styles.checkMark}>✓</Text>}
+              </View>
+            )}
+            <AngleBadge angle={item.angle} t={t} />
+          </View>
           <Text style={[styles.expr, { color: t.displayInk }]}>{item.expr}</Text>
         </View>
         <Text style={[styles.res, { color: t.displayInk }]}>= {item.result}</Text>
@@ -94,7 +104,12 @@ function Shake({ trigger, children }) {
  * @param {() => void} p.onAnglePress  the badge was tapped (opens the angle unit picker)
  * @param {boolean} p.memory       M holds a value (shows the M pill)
  * @param {boolean} p.pinFilter    showing pinned only
+ * @param {string|null} p.heldId  the card whose panel is open
+ * @param {(id) => void} p.onHold  a card was held
  * @param {(item) => void} p.onRecall  a card was tapped
+ * @param {Set<string>|null} p.selected  selected cards; null when not selecting
+ * @param {(id) => void} p.onToggle  a card was tapped while selecting
+ * @param {() => void} p.onShowAll  SHOW ALL in the pinned-only bar
  * @param {Animated.Value|number} p.height
  */
 export default function DisplayPanel({
@@ -113,6 +128,8 @@ export default function DisplayPanel({
   heldId,
   onHold,
   onRecall,
+  selected = null,
+  onToggle,
   height,
   t,
 }) {
@@ -137,7 +154,16 @@ export default function DisplayPanel({
         {items.map((item) => (
           <View key={item.id}>
             <View style={[styles.rule, { borderTopColor: t.displayRule }]} />
-            <HistoryCard item={item} t={t} held={item.id === heldId} onHold={onHold} onRecall={onRecall} />
+            <HistoryCard
+              item={item}
+              t={t}
+              held={item.id === heldId}
+              selecting={selected !== null}
+              selected={!!selected?.has(item.id)}
+              onHold={onHold}
+              onRecall={onRecall}
+              onToggle={onToggle}
+            />
           </View>
         ))}
         {items.length > 0 && <View style={[styles.rule, { borderTopColor: t.displayRule }]} />}
@@ -223,5 +249,8 @@ const styles = StyleSheet.create({
   hint: { fontFamily: F.label, fontSize: 12.5, textAlign: 'right', marginTop: 3, opacity: 0.9 },
   busy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 3 },
   busyText: { marginTop: 0, flexShrink: 1 },
+  check: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: BLUE, borderColor: BLUE },
+  checkMark: { color: '#fff', fontSize: 10, lineHeight: 12, fontFamily: F.bodyHeavy },
   box: { opacity: 0.5, fontFamily: F.label, fontSize: 15 }, // a placeholder, not typed text
 });

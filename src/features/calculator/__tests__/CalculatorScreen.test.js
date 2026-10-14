@@ -1,5 +1,13 @@
 // Smoke test: renders the real screens and presses some keys.
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
+import { writeExportFile } from '@/features/history/exportHistory';
+
+// file system and share sheet stubbed; the content builders are the real ones
+jest.mock('@/features/history/exportHistory', () => ({
+  ...jest.requireActual('@/features/history/exportHistory'),
+  writeExportFile: jest.fn((format, content, name) => Promise.resolve({ name, content })),
+  shareFile: jest.fn(() => Promise.resolve()),
+}));
 
 // Each test starts from a fresh install (an angle unit picked in one test must not leak into the next).
 beforeEach(() => require('@react-native-async-storage/async-storage').clear());
@@ -233,6 +241,7 @@ test('guests see no AI: no scan key, and no AI button when holding a calculation
   for (const k of ['(', '3', '+', '4', ')', '×', '2']) press(k);
   press('=');
   fireEvent(screen.getByText('= 14').parent, 'longPress');
+  expect(screen.getByText('Select')).toBeTruthy();
   expect(screen.queryByLabelText('AI explanation')).toBeNull();
   expect(screen.queryByText('Sign in to see steps')).toBeNull();
 });
@@ -378,4 +387,50 @@ test('ALPHA √ is the unknown x: ∫(2x,2,100) = 9996, not 0', async () => {
   for (const k of ['1', '0', '0', '=']) press(k);
   expect(screen.getByText('∫(2x,2,100)')).toBeTruthy();
   expect(screen.getByText('= 9996')).toBeTruthy();
+});
+
+test('hold → Select, tap more calculations, then Export from the header exports them oldest first', async () => {
+  await renderApp();
+  for (const k of ['6', '×', '7', '=']) press(k);
+  for (const k of ['2', '+', '3', '=']) press(k);
+  for (const k of ['9', '−', '1', '=']) press(k);
+
+  fireEvent(screen.getByText('= 5').parent, 'longPress');
+  press('Select');
+  expect(screen.getByText('1 selected')).toBeTruthy();
+  expect(screen.queryByLabelText('New session')).toBeNull(); // refresh makes way for Export
+  expect(screen.queryByLabelText('Menu')).toBeNull();
+
+  fireEvent.press(screen.getByText('= 42').parent); // a tap selects while selecting, it does not recall
+  expect(screen.getByText('2 selected')).toBeTruthy();
+  fireEvent.press(screen.getByText('= 8').parent);
+  fireEvent.press(screen.getByText('= 8').parent); // and a second tap deselects
+  expect(screen.getByText('2 selected')).toBeTruthy();
+
+  fireEvent.press(screen.getByLabelText('Export 2 selected'));
+  expect(screen.getByText('Export 2 calculations')).toBeTruthy();
+  await act(async () => press('CSV'));
+  expect(writeExportFile).toHaveBeenCalledTimes(1);
+  const [format, content] = writeExportFile.mock.calls[0];
+  expect(format).toBe('csv');
+  expect(content.indexOf('6×7')).toBeGreaterThan(0);
+  expect(content.indexOf('2+3')).toBeGreaterThan(content.indexOf('6×7'));
+  expect(content).not.toContain('9−1');
+  expect(screen.getByLabelText('New session')).toBeTruthy(); // selecting ended
+});
+
+test('the close button and deselecting the last one end selecting', async () => {
+  await renderApp();
+  for (const k of ['6', '×', '7', '=']) press(k);
+  fireEvent(screen.getByText('= 42').parent, 'longPress');
+  press('Select');
+  fireEvent.press(screen.getByLabelText('Cancel selection'));
+  expect(screen.queryByText('1 selected')).toBeNull();
+  expect(screen.getByLabelText('Menu')).toBeTruthy();
+
+  fireEvent(screen.getByText('= 42').parent, 'longPress');
+  press('Select');
+  fireEvent.press(screen.getByText('= 42').parent);
+  expect(screen.queryByText('1 selected')).toBeNull();
+  expect(screen.getByLabelText('New session')).toBeTruthy();
 });

@@ -1,11 +1,11 @@
 // Modal shown when a calculation is held: result, step-by-step workings on request
-// (the AI button, when AI is on), and Pin / Copy / Duplicate / Export actions.
+// (the AI button, when AI is on), and Pin / Copy / Duplicate / Select / Export actions.
 import { useCallback, useEffect, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { angleMode } from '@/components/AngleBadge';
 import { Skeleton, SkeletonGroup } from '@/components/Loader';
 import Popup from '@/components/Popup';
-import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon, SparkleIcon } from '@/components/Icons';
+import { CopyIcon, DuplicateIcon, ExportIcon, PinIcon, SelectIcon, SparkleIcon } from '@/components/Icons';
 import useAiOn from '@/features/ai/useAiOn';
 import { needsSteps, stepsFromPlan } from '@/features/calculator/math/aiSteps';
 import ExportRow from '@/features/export/ExportRow';
@@ -115,7 +115,7 @@ function AiButton({ t, onPress }) {
   );
 }
 
-function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
+function PanelBody({ it, t, onPin, onCopy, onDuplicate, onSelect, onExport }) {
   const aiOn = useAiOn();
   const [exportOpen, setExportOpen] = useState(false);
   const [state, load] = useSteps(it, aiOn);
@@ -153,6 +153,9 @@ function PanelBody({ it, t, onPin, onCopy, onDuplicate, onExport }) {
         </Action>
         <Action label="Duplicate" color={t.panelAction} dim={exportOpen} onPress={onDuplicate}>
           <DuplicateIcon color={t.panelAction} />
+        </Action>
+        <Action label="Select" color={t.panelAction} dim={exportOpen} onPress={onSelect}>
+          <SelectIcon color={t.panelAction} />
         </Action>
         <Action label="Export" color={exportOpen ? BLUE : t.panelAction} onPress={() => setExportOpen((o) => !o)}>
           <ExportIcon color={exportOpen ? BLUE : t.panelAction} />
@@ -203,7 +206,7 @@ const styles = StyleSheet.create({
   stepExpr: { fontFamily: F.mono, fontSize: 13 },
   sep: { height: 1, backgroundColor: 'rgba(29,38,48,.1)', marginTop: 13, marginBottom: 11 },
   actions: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  action: { alignItems: 'center', gap: 4, width: 64 },
+  action: { alignItems: 'center', gap: 4, width: 56 }, // five fit the 308px panel
   actionText: { fontFamily: F.label, fontSize: 10 },
   exportWrap: { marginTop: 11, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(29,38,48,.1)' },
 });

@@ -47,6 +47,16 @@ export function DuplicateIcon({ size = 19, color }) {
   );
 }
 
+// Select: a ticked circle (the hold panel's Select, like picking messages in a chat).
+export function SelectIcon({ size = 19, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.6)}>
+      <Circle cx="10" cy="10" r="7.2" />
+      <Path d="M6.8 10.2 L9 12.4 L13.3 7.9" />
+    </Svg>
+  );
+}
+
 export function ExportIcon({ size = 19, color }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 20 20" {...stroke(color, 1.6)}>

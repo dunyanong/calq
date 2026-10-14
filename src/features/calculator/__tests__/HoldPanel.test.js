@@ -1,5 +1,5 @@
 // The hold panel: steps on request (✦ AI) for a signed-in user with AI on, the AI call
-// stubbed; no AI at all when it is off.
+// stubbed; no AI at all when it is off; Select.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import HoldPanel from '@/features/calculator/components/HoldPanel';
 import useAiOn from '@/features/ai/useAiOn';
@@ -71,4 +71,11 @@ test('AI off (or a guest): no AI button, only the solution', () => {
   expect(screen.getByText('= 35697')).toBeTruthy();
   expect(screen.queryByLabelText('AI explanation')).toBeNull();
   expect(screen.queryByText('Sign in to see steps')).toBeNull();
+});
+
+test('Select starts selecting this calculation', () => {
+  const onSelect = jest.fn();
+  open(item('5+3', '8'), { onSelect });
+  fireEvent.press(screen.getByText('Select'));
+  expect(onSelect).toHaveBeenCalled();
 });
