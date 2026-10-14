@@ -63,7 +63,7 @@ export default function Calculator() {
 
   const pinned = history.items.filter((it) => it.pinned);
   const filterOn = pinFilter && pinned.length > 0; // off again once nothing is pinned
-  // since the last New session (+); pinned ones stay reachable through the pin pill
+  // since the last New session (refresh); pinned ones stay reachable through the pin pill
   const sessionItems = history.items.filter((it) => it.createdAt > sessionStart);
   const shown = (filterOn ? pinned : sessionItems).slice(-MAX_CARDS);
   const heldItem = history.items.find((it) => it.id === held.id) || null;
@@ -286,7 +286,7 @@ export default function Calculator() {
   // While the next key picks a variable, the line under the entry lists their values.
   const varsHint = isLetterMode(mode) ? VARIABLES.map((n) => n + '=' + formatNumber(vars[n], output)).join('  ') : null;
 
-  /** + (top right): a clean screen. Earlier calculations stay in Recent; Ans and the variables go back to 0. */
+  /** Refresh (top right): a clean screen. Earlier calculations stay in Recent; Ans and the variables go back to 0. */
   const newSession = () => {
     const before = { ans, vars, sessionStart };
     const typed = entry;

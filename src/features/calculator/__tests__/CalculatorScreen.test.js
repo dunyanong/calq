@@ -336,7 +336,7 @@ test('New session clears the screen and the memory, keeps History, and can be un
   press('B'); // B = 7
   const menu = () => fireEvent.press(screen.getAllByLabelText('Menu').at(-1));
 
-  fireEvent.press(screen.getByLabelText('New session')); // + at the top right
+  fireEvent.press(screen.getByLabelText('New session')); // refresh at the top right
   expect(screen.queryByText('= 555')).toBeNull(); // off the calculator screen…
   expect(screen.getByText('New session · history is in Recent')).toBeTruthy();
   menu();

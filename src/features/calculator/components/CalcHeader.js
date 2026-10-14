@@ -1,9 +1,9 @@
-// Calculator header: menu button, Calq logo, pinned-calculations pill, + (new session).
+// Calculator header: menu button, Calq logo, pinned-calculations pill, refresh (new session).
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Logo from '@/components/Logo';
-import { Hamburger, PinSolid, PlusIcon } from '@/components/Icons';
+import { Hamburger, PinSolid, RefreshIcon } from '@/components/Icons';
 import { useDrawer } from '@/components/Drawer';
 import { F } from '@/theme/fonts';
 import { BLUE } from '@/theme/tokens';
@@ -56,7 +56,7 @@ export default function CalcHeader({ t, pinCount, pinFilter, onPinPill, onNewSes
         accessibilityLabel="New session"
         style={({ pressed }) => pressed && { opacity: 0.5 }}
       >
-        <PlusIcon color={t.headerInk} />
+        <RefreshIcon color={t.headerInk} />
       </Pressable>
     </View>
   );

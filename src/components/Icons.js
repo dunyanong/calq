@@ -175,12 +175,12 @@ export function GearIcon({ size = 22, color }) {
   );
 }
 
-/** + (New session). */
-export function PlusIcon({ size = 24, color }) {
+// New session: a clockwise circular arrow.
+export function RefreshIcon({ size = 24, color }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 2.4)}>
-      <Path d="M12 5 V19" />
-      <Path d="M5 12 H19" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...stroke(color, 2.2)}>
+      <Path d="M21 4 V10 H15" />
+      <Path d="M19.4 15 A8.2 8.2 0 1 1 17.5 6.3 L21 10" />
     </Svg>
   );
 }
