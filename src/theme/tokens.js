@@ -51,7 +51,7 @@ export const dark = {
   accentText: 'rgb(190,223,242)',
   drawerBg: '#333e52',
   card: '#354052',
-  switchTrack: ACCENT_DARK,
+  switchTrack: '#4a5566', // grey: off must not look like the accent (on)
   selBg: 'rgba(55,138,221,.20)',
   navActiveBg: 'rgba(108,182,230,.16)',
   displayBg: '#2d3748',
