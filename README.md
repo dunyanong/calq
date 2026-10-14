@@ -105,18 +105,22 @@ PATH="/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin:$PATH" npm
 
 ## AI features
 
-Signed-in users only. The Cloud Functions in `functions/` call open-weights Qwen models through an OpenAI-compatible API (OpenRouter by default). The app checks every answer before showing it.
+Signed-in users only, behind one switch: Settings → AI integration → **AI help** (on by default). With it off, the app shows no AI at all: no scan key, no AI button, no ✦, and exports never ask. The Cloud Functions in `functions/` call open-weights Qwen models through an OpenAI-compatible API (OpenRouter by default). The app checks every answer before showing it.
 
 | Feature | Trigger | Function | Check in the app |
 |---|---|---|---|
 | Scan | camera key on the keypad | `scanEquation` (vision) | User reviews and edits the text, which then replaces the entry |
-| Steps | hold a calculation with 2+ operations or big numbers (489×73) | `explainSteps` | math.js recomputes every step (`math/aiSteps.js`); a failing plan shows "Couldn't explain this one" + Retry |
+| Steps | hold a calculation with 2+ operations or big numbers (489×73), then tap **✦ AI** at the top left of the panel | `explainSteps` | math.js recomputes every step (`math/aiSteps.js`); a failing plan shows "Couldn't explain this one" + Retry |
 | ∫ formulas | ∫ with both limits empty: ∫(x², □, □) | `integrateFormula` | F′ must equal f at sample points (`math/symbolic.js`); one retry, then an error |
-| Study notes | Settings → AI study notes, then export Markdown, LaTeX or PDF | `studyNotes` (+ `explainSteps` for the workings) | Workings are checked like Steps. A sentence is dropped if it has a number that isn't in its calculation, or claims a value (`sin(30)=0.5`, "`3!` is 6") that math.js disagrees with (`features/export/studyNotes.js`). The app writes all the Markdown / LaTeX / HTML |
+| Study notes | export Markdown, LaTeX or PDF, then answer **With AI explanation** to "Include AI explanation?" | `studyNotes` (+ `explainSteps` for the workings) | Workings are checked like Steps. A sentence is dropped if it has a number that isn't in its calculation, or claims a value (`sin(30)=0.5`, "`3!` is 6") that math.js disagrees with (`features/export/studyNotes.js`). The app writes all the Markdown / LaTeX / HTML |
 
 d/dx with the point left empty needs no AI: math.js differentiates on the device. Simple sums (5+3) and ∫, d/dx, Σ, Π calculations show no steps.
 
-Study notes cover the 20 most recent calculations of an export and end with the plain table of all of them. If the notes fail, the toast offers **Export plain**. CSV and Text, and every format with the switch off, export exactly as before.
+Study notes cover the 20 most recent calculations of an export and end with the plain table of all of them. If the notes fail, the toast offers **Export plain**. CSV and Text never ask, and neither does any format with the switch off: they export only the calculations.
+
+Exports come from the hold panel (one calculation), from the History screen (the whole list), or from a selection: hold a calculation → **Select**, tap others to add or remove them, then **Export** in the header.
+
+The menu shows **AI credits · N% left today**: what is left of all the daily limits below added together, from the `aiCredits` function (it uses no quota). The bar stays hidden until that function is deployed.
 
 Setup (once per Firebase project):
 
