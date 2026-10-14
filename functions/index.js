@@ -6,6 +6,7 @@
 //   studyNotes        calculations + their checked workings -> explanations for the
 //                     AI study-notes export; the app drops any sentence with a number
 //                     that is not in the calculation (features/export/studyNotes.js)
+//   aiCredits         today's use of the four daily limits, for the app menu's credits bar
 // The app checks everything returned here with its own math.js parser and
 // computes every number itself, so the models never do arithmetic for the user.
 //
@@ -49,18 +50,33 @@ function requireUser(request) {
  * Per-user daily quota in usage/{uid} (firestore.rules denies clients, the Admin SDK bypasses rules).
  * @param {'scan'|'steps'|'integral'|'notes'} kind
  */
+const today = () => new Date().toISOString().slice(0, 10); // quotas reset at 00:00 UTC
+const unused = (day) => ({ day, scan: 0, steps: 0, integral: 0, notes: 0 });
+
 async function useQuota(uid, kind, limit) {
-  const day = new Date().toISOString().slice(0, 10);
+  const day = today();
   const ref = db.doc('usage/' + uid);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const d = snap.exists && snap.get('day') === day ? snap.data() : { day, scan: 0, steps: 0, integral: 0, notes: 0 };
+    const d = snap.exists && snap.get('day') === day ? snap.data() : unused(day);
     if ((d[kind] || 0) >= limit) {
       throw new HttpsError('resource-exhausted', 'Daily limit reached, try again tomorrow');
     }
     tx.set(ref, { ...d, [kind]: (d[kind] || 0) + 1 });
   });
 }
+
+/** Credits used today across all four limits, and their total: { used, limit }. Uses no quota. */
+export const aiCredits = onCall({ timeoutSeconds: 10, memory: '256MiB' }, async (request) => {
+  const uid = requireUser(request);
+  const day = today();
+  const snap = await db.doc('usage/' + uid).get();
+  const d = snap.exists && snap.get('day') === day ? snap.data() : unused(day);
+  const count = (k) => (Number.isFinite(d[k]) ? d[k] : 0);
+  const limit = SCANS_PER_DAY.value() + STEPS_PER_DAY.value() + INTEGRALS_PER_DAY.value() + NOTES_PER_DAY.value();
+  const used = count('scan') + count('steps') + count('integral') + count('notes');
+  return { used: Math.min(used, limit), limit };
+});
 
 const llm = (model, messages, maxTokens, temperature = 0, timeoutMs = undefined) =>
   chatJson({ baseUrl: LLM_BASE_URL.value(), apiKey: LLM_API_KEY.value(), model, messages, maxTokens, temperature, timeoutMs });

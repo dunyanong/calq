@@ -81,3 +81,11 @@ export function studyNotes(items) {
   // up to 5 model calls in parallel on the server, each allowed 90 s
   return call('studyNotes', { items }, 130_000);
 }
+
+/**
+ * Today's AI use across the daily limits (the menu's credits bar). Free: uses no quota.
+ * @returns {Promise<{used: number, limit: number}>}
+ */
+export function aiCredits() {
+  return call('aiCredits', {}, 15_000);
+}
