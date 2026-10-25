@@ -1,11 +1,10 @@
-// Export calculations as CSV, plain text, Markdown, LaTeX or PDF through the native share sheet.
+// Export calculations as CSV, plain text, Markdown, LaTeX or PDF: the share sheet on
+// a phone, a download (or the print dialog for PDF) on the web (exportFiles(.web).js).
 // The table builders are also the "All calculations" appendix of the AI study notes
 // (features/export/notesFormat.js).
-import { File, Paths } from 'expo-file-system';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { angleMode } from '@/components/AngleBadge';
-import { latexText, toLatexMath } from './latex';
+import { share, writeFile } from './exportFiles';
+import { toLatexMath } from './latex';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -57,16 +56,13 @@ export function toMarkdown(items) {
 export const latexResult = (result) =>
   result.endsWith('+C') ? toLatexMath(result.slice(0, -2)) + '+C' : toLatexMath(result);
 
-/** The calculations as an align* block (amsmath), one row each. */
+/** The calculations as an align* block (amsmath): just "expression = result", one row each. */
 export function latexAlign(items) {
-  const rows = items.map(
-    (it) =>
-      `  ${toLatexMath(it.expr)} &= ${latexResult(it.result)} && \\text{${angleLabel(it.angle)}, ${latexText(formatDate(it.createdAt))}}`,
-  );
+  const rows = items.map((it) => `  ${toLatexMath(it.expr)} &= ${latexResult(it.result)}`);
   return ['\\begin{align*}', rows.join(' \\\\\n'), '\\end{align*}'].join('\n');
 }
 
-// A LaTeX document (amsmath) that compiles as is, e.g. on Overleaf.
+// A LaTeX document (amsmath) that compiles as is, e.g. on Overleaf: only the calculations.
 export function toLatex(items) {
   return [
     '% Exported from Calq',
@@ -74,7 +70,6 @@ export function toLatex(items) {
     '\\usepackage{amsmath}',
     '\\allowdisplaybreaks',
     '\\begin{document}',
-    '\\section*{Calq history}',
     latexAlign(items),
     '\\end{document}',
     '',
@@ -136,36 +131,23 @@ export function exportContent(items, format) {
 }
 
 /**
- * Writes an export to the cache as <name>.<ext> and returns the File.
+ * Writes an export as <name>.<ext> and returns the file.
  * @param {string} content  the file's text, or the HTML page that is printed for a PDF
  */
 export async function writeExportFile(format, content, name = 'calq-history') {
   const f = FORMATS[format];
   if (!f) throw new Error(`Unknown export format: ${format}`);
-  const file = new File(Paths.cache, `${name}.${f.ext}`);
-  if (f.html) {
-    // expo-print saves under a random name; move it so the shared file is <name>.pdf
-    const { uri } = await Print.printToFileAsync({ html: content });
-    if (file.exists) file.delete();
-    new File(uri).move(file);
-  } else {
-    file.create({ overwrite: true });
-    file.write(content);
-  }
-  return file;
+  return writeFile(`${name}.${f.ext}`, f, content);
 }
 
-/** Opens the share sheet for a written export. Resolves when it closes. */
-export async function shareFile(file, format) {
-  if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
-  const f = FORMATS[format];
-  await Sharing.shareAsync(file.uri, { mimeType: f.mimeType, UTI: f.UTI, dialogTitle: 'Export calculations' });
+/** Shares a written export (share sheet, or download / print on the web). Resolves when done. */
+export function shareFile(file, format) {
+  return share(file, FORMATS[format]);
 }
 
 // format: 'csv' | 'text' | 'markdown' | 'latex' | 'pdf'. Resolves when the share sheet closes.
 export async function shareExport(items, format) {
   if (!FORMATS[format]) throw new Error(`Unknown export format: ${format}`);
-  if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
   const file = await writeExportFile(format, exportContent(items, format));
   await shareFile(file, format);
 }

@@ -6,7 +6,8 @@
 //   to         the share sheet, or the connected Google Drive folder (services/drive.js)
 // One export at a time, with a progress pill while the AI or Drive is working.
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/showAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Loader from '@/components/Loader';
@@ -199,7 +200,7 @@ export function ExportProvider({ children }) {
       go();
       return;
     }
-    Alert.alert('Include AI explanation?', 'Adds study notes with explanations and checked workings. Uses AI credits.', [
+    showAlert('Include AI explanation?', 'Adds study notes with explanations and checked workings. Uses AI credits.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Calculation only', onPress: () => go() },
       { text: 'With AI explanation', onPress: () => go({ notes: true }) },

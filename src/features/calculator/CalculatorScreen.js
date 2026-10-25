@@ -27,6 +27,8 @@ import { BOX, boxHint, closeBox, completeEntry, deleteBefore, freezeVars, insert
 import { formatNumber, operandIn } from './math/format';
 import { VARIABLES, isLetterMode, resolveKey } from './math/keys';
 import { findAntiderivative, indefiniteIntegrand, symbolicDerivative } from './math/symbolic';
+import { pasteText, typeChar } from './math/typing';
+import useKeyboardInput from './useKeyboardInput';
 
 const MAX_ENTRY = 120; // Firestore rule allows 200; keep the display readable
 const MAX_SAVED = 200; // Firestore rule for history expressions and results (a formula can be long)
@@ -289,6 +291,31 @@ export default function Calculator() {
     // act.cancel: a key without a letter in ALPHA / STO / RCL just leaves the mode
     setMode(null);
   };
+
+  // Web: the computer keyboard and Ctrl+V, while no panel is open over the calculator.
+  useKeyboardInput({
+    enabled: !busy && !held.open && !scan.open && !anglePicker.open && !exportSheet.open && !selected,
+    onChar: (ch) => {
+      if (!typeChar(entry, ch, MAX_ENTRY)) return false;
+      setEntry((e) => typeChar(e, ch, MAX_ENTRY) || e);
+      setMode(null);
+      return true;
+    },
+    onAction: (action) => {
+      ACTIONS[action]();
+      setMode(null);
+    },
+    onCursor: moveCursor,
+    onPaste: (text) => {
+      const next = pasteText(entry, text, MAX_ENTRY);
+      if (!next) {
+        toast(text.trim() ? 'Too long to paste' : 'Nothing to paste');
+        return;
+      }
+      setEntry(next);
+      setMode(null);
+    },
+  });
 
   // While the next key picks a variable, the line under the entry lists their values.
   const varsHint = isLetterMode(mode) ? VARIABLES.map((n) => n + '=' + formatNumber(vars[n], output)).join('  ') : null;

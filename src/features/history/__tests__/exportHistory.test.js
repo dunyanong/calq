@@ -23,7 +23,6 @@ test('gradians are labelled GRAD in every format', () => {
   expect(toCSV([gradItem])).toContain('sin(100),1,GRAD,no,');
   expect(toText([gradItem])).toContain('(GRAD, ');
   expect(toMarkdown([gradItem])).toContain('| GRAD |');
-  expect(toLatex([gradItem])).toContain('\\text{GRAD, ');
 });
 
 test('CSV quotes fields with commas and quotes', () => {
@@ -43,11 +42,12 @@ test('markdown: table with escaped pipes', () => {
   expect(md).toContain('| \\|−3\\| | 79 | DEG | 2026-10-05 14:03 |');
 });
 
-test('LaTeX: a document with one align* row per calculation', () => {
+test('LaTeX: a document with just the calculations, one align* row each', () => {
   const tex = toLatex(items);
   expect(tex).toContain('\\documentclass{article}');
-  expect(tex).toContain('\\begin{align*}\n  \\left(3+4\\right)\\times 12-5 &= 79 && \\text{DEG, 2026-10-05 14:03} \\\\\n');
-  expect(tex).toContain('  \\sin\\left(\\pi \\div 2\\right) &= 1 && \\text{RAD, 2026-10-05 14:03}\n\\end{align*}');
+  expect(tex).toContain('\\begin{document}\n\\begin{align*}\n  \\left(3+4\\right)\\times 12-5 &= 79 \\\\\n');
+  expect(tex).toContain('  \\sin\\left(\\pi \\div 2\\right) &= 1\n\\end{align*}');
+  expect(tex).not.toMatch(/section|DEG|RAD|2026/); // no heading, angle unit or date
   expect(tex.trim().endsWith('\\end{document}')).toBe(true);
 });
 

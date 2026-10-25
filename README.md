@@ -93,6 +93,29 @@ Real iPhone with a free Apple ID (the app expires after 7 days): add the Apple I
 npx expo run:ios --device
 ```
 
+### Web
+
+The same app runs in a browser (react-native-web), in a phone-width column on wide screens. No native build needed:
+
+```sh
+npm run web          # dev server, opens http://localhost:8081
+npm run deploy:web   # build into dist/ and publish to Firebase Hosting
+```
+
+The web build is live at `https://<project-id>.web.app`. Firebase Auth allows `localhost` and that domain by default; add any custom domain under Authentication → Settings → Authorized domains.
+
+Where the web differs (files ending in `.web.js` replace the native ones):
+
+| | Phone | Web |
+|---|---|---|
+| Sign-in (`googleAuth`) | native Google account picker | Google popup (allow pop-ups) |
+| Export (`exportFiles`) | share sheet; PDF made on the device | download; PDF opens the print dialog (Save as PDF) |
+| PDF to Drive | the device's PDF | Drive converts the page: upload as a Google Doc, export PDF, delete the Doc |
+| Drive access (`driveAuth`) | Google Sign-In, refreshed automatically | Google popup; the token lasts about an hour, for this tab only. When it runs out mid-export, the export asks to reconnect in Settings |
+| Dialogs (`showAlert`) | `Alert.alert` | a dialog drawn in the page (react-native-web's `Alert` does nothing) |
+| Auth persistence | AsyncStorage | IndexedDB |
+| Input (`useKeyboardInput`) | the keypad | the keypad, plus the computer keyboard and Ctrl+V (`math/typing.js`): `* / -` type `× ÷ −`, function names become the key at `(` (`sqrt(` → `√(`, `int(` → `∫(□,□,□)`), Enter is =, Backspace is DEL, Esc is AC, arrows move the cursor. Pasted text is converted like a scan |
+
 ## Test
 
 ```sh

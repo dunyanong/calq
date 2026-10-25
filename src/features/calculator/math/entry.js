@@ -40,6 +40,8 @@ const LABELS = {
 };
 
 /** What a template key types: "∫(" -> "∫(□,□,□)". */
+/** True for an opener that types boxes, e.g. "∫(". */
+export const isTemplate = (opener) => Object.hasOwn(TEMPLATES, opener);
 export const templateText = (opener) => opener + TEMPLATES[opener].map(() => BOX).join(',') + ')';
 
 /** Index of the "(" whose brackets enclose position pos, or -1. */

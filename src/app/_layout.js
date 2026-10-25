@@ -9,6 +9,7 @@ import { SettingsProvider, useSettings } from '@/features/settings/SettingsConte
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { HistoryProvider, useHistory } from '@/features/history/HistoryContext';
 import { ToastProvider } from '@/components/Toast';
+import AppFrame from '@/components/AppFrame';
 import { DrawerProvider } from '@/components/Drawer';
 import { ExportProvider } from '@/features/export/ExportContext';
 
@@ -42,17 +43,19 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <AuthProvider>
-          <HistoryProvider>
-            <ToastProvider>
-              <ExportProvider>
-                <DrawerProvider>
-                  <AppShell />
-                </DrawerProvider>
-              </ExportProvider>
-            </ToastProvider>
-          </HistoryProvider>
-        </AuthProvider>
+        <AppFrame>
+          <AuthProvider>
+            <HistoryProvider>
+              <ToastProvider>
+                <ExportProvider>
+                  <DrawerProvider>
+                    <AppShell />
+                  </DrawerProvider>
+                </ExportProvider>
+              </ToastProvider>
+            </HistoryProvider>
+          </AuthProvider>
+        </AppFrame>
       </SettingsProvider>
     </SafeAreaProvider>
   );

@@ -1,6 +1,7 @@
 // Settings screen: account, angle unit, output format, appearance, AI integration (the AI switch), Google Drive.
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/showAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import Loader from '@/components/Loader';
@@ -75,7 +76,7 @@ function DriveCard({ t, user }) {
   };
 
   const disconnect = () =>
-    Alert.alert('Disconnect Google Drive?', 'Calq will stop saving to your Drive. Files it already saved stay there.', [
+    showAlert('Disconnect Google Drive?', 'Calq will stop saving to your Drive. Files it already saved stay there.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Disconnect',
