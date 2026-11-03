@@ -97,6 +97,8 @@ export function stepsFromPlan(expr, res, angle, plan) {
         part = normalizeExpr(part); // model wrote "-" or "*"
         at = locate(src, part, next);
       }
+      // a part worked out in an earlier step, listed again: nothing new to do
+      if (at < 0 && next.some((s) => src.slice(s.start, s.end) === part)) continue;
       const value = at < 0 ? null : evaluate(part, angle);
       if (value === null) return null;
       const end = at + part.length;

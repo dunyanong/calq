@@ -137,6 +137,9 @@ const MULTI_TOKENS = [...NUMERIC_ROWS, ...SCIENTIFIC_ROWS]
   .filter((tok) => tok && tok.length > 1)
   .sort((x, y) => y.length - x.length);
 
+/** The function keys' tokens, e.g. "sin(", "log_b(", "∫(" (typing them by name: typing.js). */
+export const FUNCTION_TOKENS = MULTI_TOKENS.filter((tok) => tok.endsWith('('));
+
 /** Length of the key press that ends `s` ("sin(" is one step, not four). */
 export function tokenBefore(s) {
   if (!s) return 0;

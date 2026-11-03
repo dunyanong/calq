@@ -2,6 +2,13 @@
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderRouter, screen, fireEvent, act } from 'expo-router/testing-library';
+import { shareFile, writeExportFile } from '@/features/history/exportHistory';
+
+jest.mock('@/features/history/exportHistory', () => ({
+  ...jest.requireActual('@/features/history/exportHistory'),
+  writeExportFile: jest.fn((format, content, name) => Promise.resolve({ name, content, size: content.length })),
+  shareFile: jest.fn(() => Promise.resolve()),
+}));
 
 const press = (label) => fireEvent.press(screen.getAllByText(label).at(-1));
 
@@ -94,4 +101,49 @@ test('tapping a row opens it on the calculator to edit', async () => {
   await act(async () => {});
   expect(screen.getByLabelText('Cursor left')).toBeTruthy(); // on the calculator
   expect(screen.getAllByText('7×6')).toHaveLength(2); // the history card and the entry
+});
+
+describe('Select, then Export', () => {
+  test('Select ticks rows; Export is for the ticked ones only', async () => {
+    await seed(['a', '1+1', '2'], ['b', '2+3', '5'], ['c', '4×4', '16']);
+    await render('/history');
+    expect(screen.queryByText('Export')).toBeNull(); // Select comes first
+    press('Select');
+    expect(screen.getByText('0 selected')).toBeTruthy();
+    expect(screen.queryAllByLabelText('Delete')).toHaveLength(0); // row buttons hide while selecting
+    expect(screen.getByLabelText('Export 0 selected')).toBeDisabled();
+
+    fireEvent.press(screen.getByText('1+1'));
+    fireEvent.press(screen.getByText('4×4'));
+    expect(screen.getByText('2 selected')).toBeTruthy();
+    fireEvent.press(screen.getByText('4×4')); // tap again: deselected
+    fireEvent.press(screen.getByText('2+3'));
+    expect(screen.getByText('2 selected')).toBeTruthy();
+
+    press('Export');
+    await act(async () => press('CSV'));
+    const [format, content] = writeExportFile.mock.calls[0];
+    expect(format).toBe('csv');
+    expect(content).toContain('1+1');
+    expect(content).toContain('2+3');
+    expect(content).not.toContain('4×4');
+    expect(shareFile).toHaveBeenCalled();
+    expect(screen.getByText('3 calculations')).toBeTruthy(); // selecting ended
+  });
+
+  test('All / None, and the close button leaves without exporting', async () => {
+    await seed(['a', '1+1', '2'], ['b', '2+3', '5']);
+    await render('/history');
+    press('Select');
+    press('All');
+    expect(screen.getByText('2 selected')).toBeTruthy();
+    press('None');
+    expect(screen.getByText('0 selected')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Cancel selection'));
+    expect(screen.getByText('2 calculations')).toBeTruthy();
+    expect(screen.getAllByLabelText('Delete')).toHaveLength(2);
+    fireEvent.press(screen.getByText('1+1')); // a tap opens it on the calculator again
+    await act(async () => {});
+    expect(screen.getByLabelText('Cursor left')).toBeTruthy();
+  });
 });

@@ -43,11 +43,13 @@ Plan the evaluation as ordered steps. Each step has:
   (the original, or the latest rewrite), that are worked out in this step
 - "note": what happens, max 8 words, e.g. "Sine of 30°", "Powers before multiplication"
 
-A step may have "rewrite" instead of "parts": the whole expression rewritten in an exactly equal,
+A step may have "rewrite" instead of "parts": the WHOLE expression rewritten in an exactly equal,
 easier form, so a person can do it by hand. Use it to break down hard arithmetic:
 - long multiplication by place value: 489×73 → 489×70+489×3
 - long division by splitting the dividend: 7488÷24 → 7200÷24+288÷24
 - distributing or regrouping: 25×36 → 25×4×9
+A rewrite keeps everything it does not break down, so its value equals the whole expression:
+7×69×3 → 7×70×3−7×1×3 (never 7×70−7×1, which drops the ×3), 489×73+12 → 489×70+489×3+12.
 Only exact whole numbers or short decimals in rewrites, never rounded values.
 After a rewrite, later parts are copied from the rewrite.
 
@@ -58,7 +60,8 @@ Rules:
 - A later part may contain earlier parts (e.g. "sin(30)" then "3×sin(30)"); parts never partly overlap.
 - Put independent parts of the same kind in one step.
 - The last step's only part is the whole expression.
-- Do NOT calculate any numbers. The app computes every value itself.
+- Do NOT calculate any numbers. The app computes every value itself. A part never contains a value
+  you worked out (not "9÷(8+1)" or "100×1"): after "2^3" is worked out, the next part is "2^3+1".
 - 2 to 10 steps; skip trivial ones on long expressions.
 
 Example — expression: 2+3×sin(30)², angle: deg
@@ -66,6 +69,9 @@ Example — expression: 2+3×sin(30)², angle: deg
 
 Example — expression: 489×73+12, angle: deg
 {"steps":[{"rewrite":"489×70+489×3+12","note":"Split 73 into 70 + 3"},{"parts":["489×70","489×3"],"note":"Multiply each part"},{"parts":["489×70+489×3"],"note":"Add the partial products"},{"parts":["489×70+489×3+12"],"note":"Add 12"}]}
+
+Example — expression: 6×58×4, angle: deg
+{"steps":[{"rewrite":"6×60×4−6×2×4","note":"Write 58 as 60 − 2"},{"parts":["6×60×4","6×2×4"],"note":"Multiply each part"},{"parts":["6×60×4−6×2×4"],"note":"Subtract to get the result"}]}
 
 Reply with JSON only: {"steps":[{"parts":["..."],"note":"..."} or {"rewrite":"...","note":"..."}]}`;
 

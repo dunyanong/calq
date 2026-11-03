@@ -59,6 +59,39 @@ describe('stepsFromPlan', () => {
     expect(stepsFromPlan('4890001×73', '356970073', 'deg', [{ rewrite: '356970074', note: 'x' }])).toBeNull();
   });
 
+  test('a part listed again after it was worked out is skipped (real model plans)', () => {
+    const plan = [
+      { rewrite: '1200÷2+34÷2+17×19', note: 'Split 1234 into 1200 + 34' },
+      { parts: ['1200÷2', '34÷2', '17×19'], note: 'Divide and multiply each part' },
+      { parts: ['1200÷2+34÷2', '17×19'], note: 'Add partial quotients' },
+      { parts: ['1200÷2+34÷2+17×19'], note: 'Add to get the result' },
+    ];
+    expect(exprs(stepsFromPlan('1234÷2+17×19', '940', 'deg', plan))).toEqual([
+      '1234÷2+17×19',
+      '1200÷2+34÷2+17×19',
+      '600+17+323',
+      '617+323',
+      '= 940',
+    ]);
+    const regroup = [
+      { rewrite: '25×4×9÷(2^3+1)', note: 'Regroup 36 as 4×9' },
+      { parts: ['2^3'], note: 'Power first' },
+      { parts: ['2^3+1'], note: 'Addition in denominator' },
+      { parts: ['25×4×9', '2^3+1'], note: 'Multiply numerator parts' },
+      { parts: ['25×4×9÷(2^3+1)'], note: 'Divide to get result' },
+    ];
+    expect(stepsFromPlan('25×36÷(2^3+1)', '100', 'deg', regroup)).not.toBeNull();
+  });
+
+  test('rejects a rewrite of only part of the expression (a real model mistake)', () => {
+    const plan = [
+      { rewrite: '7×70−7×1', note: 'Replace 69 with 70−1' }, // drops the ×3
+      { parts: ['7×70', '7×1'], note: 'Multiply each part' },
+      { parts: ['7×70−7×1'], note: 'Subtract to get result' },
+    ];
+    expect(stepsFromPlan('7×69×3', '1449', 'deg', plan)).toBeNull();
+  });
+
   test('rejects a wrong order of operations', () => {
     expect(stepsFromPlan('2×3+4', '10', 'deg', [{ parts: ['3+4'], note: 'Add' }])).toBeNull();
   });

@@ -43,6 +43,15 @@
           "microphonePermission": false
         }
       ]
-    ]
+    ],
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "name": "Calq",
+      "shortName": "Calq",
+      "backgroundColor": "#a8cfe0",
+      "themeColor": "#a8cfe0"
+    }
   }
 }
