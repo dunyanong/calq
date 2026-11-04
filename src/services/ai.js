@@ -1,6 +1,7 @@
 // Calls the AI Cloud Functions (functions/index.js). Signed-in users only.
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/services/firebase';
+import { recordAiTime } from '@/features/ai/aiEta';
 
 const MESSAGES = {
   'functions/unauthenticated': 'Sign in to use this feature',
@@ -16,9 +17,14 @@ function friendly(e) {
   return new Error(MESSAGES[e?.code] || 'Something went wrong. Check your connection');
 }
 
+// Which estimate each callable teaches (features/ai/aiEta.js).
+const ETA_KIND = { scanEquation: 'scan', explainSteps: 'steps', integrateFormula: 'formula', studyNotes: 'notes' };
+
 async function call(name, data, timeout = 70_000) {
   try {
+    const t0 = Date.now();
     const res = await httpsCallable(functions, name, { timeout })(data);
+    if (ETA_KIND[name]) recordAiTime(ETA_KIND[name], Date.now() - t0);
     return res.data;
   } catch (e) {
     throw friendly(e);

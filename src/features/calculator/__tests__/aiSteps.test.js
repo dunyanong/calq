@@ -1,4 +1,6 @@
-import { stepsFromPlan } from '@/features/calculator/math/aiSteps';
+import { localSteps, stepsFromPlan } from '@/features/calculator/math/aiSteps';
+import { evaluate } from '@/features/calculator/math/engine';
+import { formatNumber } from '@/features/calculator/math/format';
 import { normalizeExpr } from '@/features/calculator/math/normalize';
 
 const exprs = (steps) => steps.map((s) => s.expr);
@@ -102,5 +104,43 @@ describe('normalizeExpr', () => {
   test('leaves calculator notation alone', () => {
     const s = 'ˣ√(3,27)+log_b(2,8)−sin⁻¹(1)×1.5E−3';
     expect(normalizeExpr(s)).toBe(s);
+  });
+});
+
+describe('localSteps: workings without AI', () => {
+  const steps = (expr, angle = 'deg') => {
+    const r = localSteps(expr, formatNumber(evaluate(expr, angle)), angle);
+    return r && r.slice(1).map((s) => s.label.replace(/^Step \d+ — /, '') + ': ' + s.expr);
+  };
+
+  test('order of operations, with what each step does', () => {
+    expect(steps('2+3×sin(30)²')).toEqual(['Sine of 30°: 2+3×0.5²', 'Powers first: 2+3×0.25', 'Multiply: 2+0.75', 'Add: = 2.75']);
+    expect(steps('(3+4)×12−5')).toEqual(['Brackets first: 7×12−5', 'Multiply: 84−5', 'Subtract: = 79']);
+    expect(steps('5!÷3!')).toEqual(['Factorial: 120÷6', 'Divide: = 20']);
+    expect(steps('√(9)×√(16)−nCr(5,2)')).toEqual(['Functions first: 3×4−10', 'Multiply: 12−10', 'Subtract: = 2']);
+  });
+
+  test('a minus sign goes with what it applies to: −2² is −4', () => {
+    expect(steps('−2²+3')).toEqual(['Powers first: (-4)+3', 'Add: = -1']);
+  });
+
+  test('a chain of the same operation is one step', () => {
+    expect(steps('1+2+3+4+5+6+7+8+9+10+11+12+13+14')).toEqual(['Add: = 105']);
+  });
+
+  test('implicit products follow math.js: 6÷2(1+2) is (6÷2)(3), but (7)²÷2(3) is 49÷6', () => {
+    expect(steps('6÷2(1+2)')).toEqual(['Brackets first: 6÷2(3)', 'Multiply and divide, left to right: = 9']);
+    // (49) keeps math.js from reading 49÷2(3) as (49÷2)(3)
+    expect(steps('(7)²÷2(3)')).toEqual(['Powers first: (49)÷2(3)', 'Multiply and divide, left to right: = 8.166666667']);
+  });
+
+  test('every step keeps the value of the original', () => {
+    for (const expr of ['2^3^2', '2(3+4)²', 'e^(2)−1', '3⁻¹+1÷3', '((2+3)×(4−1))÷5', 'log_b(2,8)+√(16)', '1.5E−3×2+1']) {
+      expect(steps(expr)).not.toBeNull();
+    }
+  });
+
+  test('a single number has no workings', () => {
+    expect(steps('−1.5E−3')).toBeNull();
   });
 });

@@ -91,6 +91,95 @@ export const SCIENTIFIC_ROWS = [
   ],
 ];
 
+// The advanced pages: matrices (typed [1,2;3,4]), complex numbers and calculus in
+// several variables; then optimisation, ODEs, discrete maths and graphs (given as
+// adjacency / weight matrices). See advanced.js for what each key works out.
+export const MATRIX_ROWS = [
+  [
+    { face: '[', kind: 'fn', main: t('[') },
+    { face: ']', kind: 'fn', main: t(']') },
+    { face: ',', kind: 'fn', main: t(',') },
+    { face: ';', kind: 'fn', main: t(';') },
+    { face: 'Aᵀ', kind: 'fn', main: t('ᵀ'), shift: sh('∞', t('∞')) },
+    { face: 'i', kind: 'fn', main: t('i') },
+  ],
+  [
+    { face: 'x', kind: 'fn', main: t('x') },
+    { face: 'y', kind: 'fn', main: t('y') },
+    { face: 'z', kind: 'fn', main: t('z') },
+    { face: 'det', kind: 'fn', main: t('det('), shift: sh('inv', t('inv(')) },
+    { face: 'eig', kind: 'fn', main: t('eig('), shift: sh('svd', t('svd(')) },
+    { face: 'rank', kind: 'fn', main: t('rank('), shift: sh('trace', t('trace(')) },
+  ],
+  [
+    { face: 'solve', kind: 'fn', main: box('solve('), shift: sh('rref', t('rref(')) },
+    { face: 'LU', kind: 'fn', main: t('lu('), shift: sh('QR', t('qr(')) },
+    { face: 'null', kind: 'fn', main: t('null('), shift: sh('Jordan', t('jordan(')) },
+    { face: 'chol', kind: 'fn', main: t('chol('), shift: sh('posdef', t('posdef(')) },
+    { face: 'norm', kind: 'fn', main: t('norm('), shift: sh('dot', box('dot(')) },
+    { face: 'cross', kind: 'fn', main: box('cross('), shift: sh('kron', box('kron(')) },
+  ],
+  [
+    { face: '∬', kind: 'fn', main: box('∬('), shift: sh('∭', box('∭(')) },
+    { face: '∂/∂x', kind: 'fn', main: box('∂x('), shift: sh('∂/∂y', box('∂y(')) },
+    { face: '∇f', kind: 'fn', main: box('grad('), shift: sh('∂/∂z', box('∂z(')) },
+    { face: 'Jac', kind: 'fn', main: box('jac('), shift: sh('Hess', box('hess(')) },
+    { face: 'div', kind: 'fn', main: box('div('), shift: sh('curl', box('curl(')) },
+    { face: '∇²', kind: 'fn', main: box('lap('), shift: sh('Taylor', box('taylor(')) },
+  ],
+  [
+    { face: 'lim', kind: 'fn', main: box('lim('), shift: sh('Iₙ', t('I(')) },
+    { face: 'Re', kind: 'fn', main: t('re('), shift: sh('Im', t('im(')) },
+    { face: 'z̄', kind: 'fn', main: t('conj('), shift: sh('arg', t('arg(')) },
+    { face: '|x|', kind: 'fn', main: t('abs(') },
+    { face: '(', kind: 'fn', main: t('(') },
+    { face: ')', kind: 'fn', main: t(')') },
+  ],
+];
+
+export const SOLVE_ROWS = [
+  [
+    { face: '[', kind: 'fn', main: t('[') },
+    { face: ']', kind: 'fn', main: t(']') },
+    { face: ',', kind: 'fn', main: t(',') },
+    { face: 'x', kind: 'fn', main: t('x'), shift: sh('z', t('z')) },
+    { face: 'y', kind: 'fn', main: t('y'), shift: sh('y′', t('y′')) },
+    { face: 'n', kind: 'fn', main: t('n') },
+  ],
+  [
+    { face: 'min', kind: 'fn', main: box('min('), shift: sh('minc', box('minc(')) },
+    { face: 'max', kind: 'fn', main: box('max('), shift: sh('maxc', box('maxc(')) },
+    { face: 'LP', kind: 'fn', main: box('lp('), shift: sh('ILP', box('ilp(')) },
+    { face: 'a=b', kind: 'fn', main: t('='), shift: sh('∞', t('∞')) }, // = of an equation; the = key works it out
+    { face: '≤', kind: 'fn', main: t('≤'), shift: sh('≥', t('≥')) },
+    { face: 'roots', kind: 'fn', main: t('roots(') },
+  ],
+  [
+    { face: 'solve', kind: 'fn', main: box('nsolve('), shift: sh('root', box('root(')) },
+    { face: 'ODE', kind: 'fn', main: box('ode('), shift: sh('ODE2', box('ode2(')) },
+    { face: 'BVP', kind: 'fn', main: box('bvp('), shift: sh('stab', t('stab(')) },
+    { face: 'mod', kind: 'fn', main: box('mod('), shift: sh('φ', t('φ(')) },
+    { face: 'prime?', kind: 'fn', main: t('isprime('), shift: sh('factor', t('factor(')) },
+    { face: 'modinv', kind: 'fn', main: box('modinv('), shift: sh('modpow', box('modpow(')) },
+  ],
+  [
+    { face: 'and', kind: 'fn', main: box('and('), shift: sh('or', box('or(')) },
+    { face: 'not', kind: 'fn', main: t('not('), shift: sh('xor', box('xor(')) },
+    { face: 'rec', kind: 'fn', main: box('rec('), shift: sh('⇒', box('implies(')) },
+    { face: 'Cat', kind: 'fn', main: t('catalan('), shift: sh('S(n,k)', box('stirling(')) },
+    { face: 'Bell', kind: 'fn', main: t('bell('), shift: sh('A∪B', box('union(')) },
+    { face: 'A∩B', kind: 'fn', main: box('inter('), shift: sh('A∖B', box('setdiff(')) },
+  ],
+  [
+    { face: 'path', kind: 'fn', main: box('path('), shift: sh('MST', t('mst(')) },
+    { face: 'flow', kind: 'fn', main: box('flow('), shift: sh('assign', t('assign(')) },
+    { face: 'χ(G)', kind: 'fn', main: t('colour('), shift: sh('comps', t('comps(')) },
+    { face: 'trees', kind: 'fn', main: t('trees('), shift: sh('λ₂', t('fiedler(')) },
+    { face: '(', kind: 'fn', main: t('(') },
+    { face: ')', kind: 'fn', main: t(')') },
+  ],
+];
+
 // Stored variables. E is missing on purpose (it is the ×10ˣ exponent), and so are X and Y:
 // they looked like the unknown x, and ∫(2X,…) silently became ∫(2(0),…).
 export const VARIABLES = ['A', 'B', 'C', 'D', 'F', 'M'];
@@ -131,7 +220,7 @@ export function faceSize(face, kind = 'fn') {
 }
 
 // Every multi-character token a key can insert, longest first.
-const MULTI_TOKENS = [...NUMERIC_ROWS, ...SCIENTIFIC_ROWS]
+const MULTI_TOKENS = [...NUMERIC_ROWS, ...SCIENTIFIC_ROWS, ...MATRIX_ROWS, ...SOLVE_ROWS]
   .flat()
   .flatMap((k) => [k.main?.token, k.shift?.token, k.hyp?.token])
   .filter((tok) => tok && tok.length > 1)

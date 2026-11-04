@@ -74,7 +74,7 @@ test('∫dx types boxes: fill f(x), ▶, the limits, =', async () => {
   press('1');
   press('=');
   expect(screen.getByText('∫(x²,0,1)')).toBeTruthy();
-  expect(screen.getByText('= 0.3333333333')).toBeTruthy();
+  expect(await screen.findByText('= 0.3333333333')).toBeTruthy(); // ∫ and d/dx finish after "Working it out…"
 });
 
 test('d/dx with a point gives a number, without one a formula', async () => {
@@ -86,7 +86,7 @@ test('d/dx with a point gives a number, without one a formula', async () => {
   right();
   press('2');
   press('=');
-  expect(screen.getByText('= 12')).toBeTruthy();
+  expect(await screen.findByText('= 12')).toBeTruthy(); // ∫ and d/dx finish after "Working it out…"
 
   press('d/dx');
   press('x');
@@ -113,7 +113,7 @@ test('∫ without limits needs sign-in (the formula comes from the AI)', async (
 test('x outside ∫, d/dx or Σ explains itself', async () => {
   await renderApp();
   for (const k of ['2', 'x', '=']) press(k);
-  expect(screen.getByText('Use x inside ∫, d/dx, Σ or Π')).toBeTruthy();
+  expect(screen.getByText('Use x, y, z inside ∫, ∂, min, ode …')).toBeTruthy();
 });
 
 test('brackets and % are on the numeric page', async () => {
@@ -235,15 +235,17 @@ test('a/b shows the format a tap switches to', async () => {
   expect(screen.getByText('= 3/4')).toBeTruthy();
 });
 
-test('guests see no AI: no scan key, and no AI button when holding a calculation', async () => {
+test('guests see no AI (no scan key), but steps work without it', async () => {
   await renderApp(); // tests run as a guest
   expect(screen.queryByLabelText('Scan a calculation')).toBeNull();
   for (const k of ['(', '3', '+', '4', ')', '×', '2']) press(k);
   press('=');
   fireEvent(screen.getByText('= 14').parent, 'longPress');
   expect(screen.getByText('Select')).toBeTruthy();
-  expect(screen.queryByLabelText('AI explanation')).toBeNull();
-  expect(screen.queryByText('Sign in to see steps')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Show steps'));
+  expect(screen.getByText('STEP 2 — BRACKETS FIRST')).toBeTruthy();
+  expect(screen.getByText('7×2')).toBeTruthy();
+  expect(screen.queryByText(/Looking for a shortcut/)).toBeNull();
 });
 
 test('holding a calculation, Pin adds the pinned pill', async () => {
@@ -386,7 +388,7 @@ test('ALPHA √ is the unknown x: ∫(2x,2,100) = 9996, not 0', async () => {
   right();
   for (const k of ['1', '0', '0', '=']) press(k);
   expect(screen.getByText('∫(2x,2,100)')).toBeTruthy();
-  expect(screen.getByText('= 9996')).toBeTruthy();
+  expect(await screen.findByText('= 9996')).toBeTruthy(); // ∫ and d/dx finish after "Working it out…"
 });
 
 test('hold → Select, tap more calculations, then Export from the header exports them oldest first', async () => {
@@ -433,4 +435,25 @@ test('the close button and deselecting the last one end selecting', async () => 
   fireEvent.press(screen.getByText('= 42').parent);
   expect(screen.queryByText('1 selected')).toBeNull();
   expect(screen.getByLabelText('New session')).toBeTruthy();
+});
+
+test('matrix page: det of a typed matrix, a transpose drawn in rows, and Ans keeps the matrix', async () => {
+  await renderApp();
+  for (const k of ['det', '[', '1', ',', '2', ';', '3', ',', '4', ']', '=']) press(k);
+  expect(screen.getByText('= -2')).toBeTruthy();
+
+  for (const k of ['[', '1', ',', '2', ';', '3', ',', '4', ']', 'Aᵀ', '=']) press(k);
+  expect(screen.getByText('⎡ 1  3 ⎤')).toBeTruthy();
+  expect(screen.getByText('⎣ 2  4 ⎦')).toBeTruthy();
+
+  press('det');
+  press('Ans');
+  press('=');
+  expect(screen.getByText('det([1,3;2,4])')).toBeTruthy();
+});
+
+test('an i means complex numbers: (1+2i)×i', async () => {
+  await renderApp();
+  for (const k of ['(', '1', '+', '2', 'i', ')', '×', 'i', '=']) press(k);
+  expect(screen.getByText('= -2+i')).toBeTruthy();
 });

@@ -37,7 +37,7 @@ const INTEGRALS_PER_DAY = defineInt('INTEGRALS_PER_DAY', { default: 50 });
 const NOTES_PER_DAY = defineInt('NOTES_PER_DAY', { default: 20 });
 
 const MAX_IMAGE_B64 = 3_000_000; // ~2.2 MB JPEG; the app sends ~200 KB
-const MAX_EXPR = 200; // same limit as history items in firestore.rules
+const MAX_EXPR = 2000; // same limit as history items in firestore.rules
 const OPTS = { secrets: [LLM_API_KEY], timeoutSeconds: 60, memory: '256MiB' };
 
 function requireUser(request) {
@@ -116,7 +116,7 @@ export const scanEquation = onCall(OPTS, async (request) => {
         ],
       },
     ],
-    300,
+    600, // a matrix or an LP takes more tokens than a single line of arithmetic
   );
   return { expr: str(reply.expr, MAX_EXPR), note: str(reply.note, 80) };
 });

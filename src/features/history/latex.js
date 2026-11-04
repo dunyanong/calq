@@ -17,7 +17,22 @@ const NAMED = [
   ['log(', '\\log'], ['ln(', '\\ln'],
   ['round(', '\\operatorname{round}'], ['gcd(', '\\gcd'], ['lcm(', '\\operatorname{lcm}'],
   ['RanInt(', '\\operatorname{RanInt}'],
+  ['det(', '\\det'], ['arg(', '\\arg'], ['min(', '\\min'], ['max(', '\\max'], ['φ(', '\\varphi'],
+  ['re(', '\\operatorname{Re}'], ['im(', '\\operatorname{Im}'], ['trace(', '\\operatorname{tr}'],
+  ['grad(', '\\nabla'], ['lap(', '\\nabla^{2}'], ['I(', 'I'],
+  // the other advanced keys print under their own names
+  ...['inv', 'rank', 'eig', 'svd', 'lu', 'qr', 'rref', 'null', 'solve', 'norm', 'dot', 'cross', 'kron', 'chol',
+    'posdef', 'jordan', 'conj', 'jac', 'hess', 'div', 'curl', 'taylor', 'ode', 'ode2', 'bvp', 'stab', 'minc', 'maxc',
+    'lp', 'ilp', 'root', 'nsolve', 'roots', 'mod', 'isprime', 'factor', 'modinv', 'modpow', 'and', 'or', 'not',
+    'xor', 'implies', 'rec', 'catalan', 'stirling', 'bell', 'union', 'inter', 'setdiff', 'path', 'mst', 'flow',
+    'assign', 'colour', 'comps', 'trees', 'fiedler'].map((n) => [n + '(', '\\operatorname{' + n + '}']),
 ];
+
+/** ∂/∂v of f, at the point when there is one. */
+const partial = (v) => ([f, ...point]) => {
+  const d = '\\frac{\\partial}{\\partial ' + v + '}' + paren(f);
+  return point.length ? '\\left.' + d + '\\right|_{' + paren(point.join(',')) + '}' : d;
+};
 
 // Functions with their own layout, given their inputs already in LaTeX.
 const SPECIAL = {
@@ -34,6 +49,12 @@ const SPECIAL = {
   'd/dx(': ([f, a]) => (a === undefined ? '\\frac{d}{dx}' + paren(f) : '\\left.\\frac{d}{dx}' + paren(f) + '\\right|_{x=' + a + '}'),
   'Σ(': ([f, a, b]) => '\\sum_{x=' + a + '}^{' + b + '} ' + group(f),
   'Π(': ([f, a, b]) => '\\prod_{x=' + a + '}^{' + b + '} ' + group(f),
+  '∬(': ([f, a, b, c, d]) => `\\int_{${a}}^{${b}}\\int_{${c}}^{${d}} ${group(f)}\\,dy\\,dx`,
+  '∭(': ([f, a, b, c, d, p, q]) => `\\int_{${a}}^{${b}}\\int_{${c}}^{${d}}\\int_{${p}}^{${q}} ${group(f)}\\,dz\\,dy\\,dx`,
+  '∂x(': partial('x'),
+  '∂y(': partial('y'),
+  '∂z(': partial('z'),
+  'lim(': ([f, a]) => '\\lim_{x\\to ' + a + '} ' + group(f),
 };
 
 const OPENERS = [...NAMED.map(([o]) => o), ...Object.keys(SPECIAL)].sort((a, b) => b.length - a.length);
@@ -41,7 +62,38 @@ const OPENERS = [...NAMED.map(([o]) => o), ...Object.keys(SPECIAL)].sort((a, b) 
 const SYMBOLS = {
   '×': '\\times ', '÷': '\\div ', '−': '-', '-': '-', '+': '+', ',': ',', '!': '!', '%': '\\%',
   'π': '\\pi ', '²': '^{2}', '³': '^{3}',
+  'λ': '\\lambda ', 'Σ': '\\Sigma ', 'χ': '\\chi ', // names in results: λ=[…], Σ=[…], χ=3
+  'ᵀ': '^{\\mathsf{T}}', '∞': '\\infty ', '=': '=', '≤': '\\le ', '≥': '\\ge ', '′': "'",
 };
+
+/** [1,2;3,4] -> a bmatrix; its entries in LaTeX. Returns the index after the "]". */
+function matrix(text, open, convert) {
+  let depth = 0;
+  let close = -1;
+  for (let i = open; i < text.length; i++) {
+    if ('(['.includes(text[i])) depth++;
+    else if (')]'.includes(text[i]) && --depth === 0) {
+      close = i;
+      break;
+    }
+  }
+  if (close < 0) throw new Error('Unclosed [');
+  // split at the , and ; of this matrix only
+  const rows = [[]];
+  let start = open + 1;
+  depth = 0;
+  for (let i = open + 1; i <= close; i++) {
+    const c = text[i];
+    if ('(['.includes(c)) depth++;
+    else if (')]'.includes(c) && i < close) depth--;
+    else if (depth === 0 && (c === ',' || c === ';' || i === close)) {
+      rows[rows.length - 1].push(convert(text.slice(start, i)));
+      if (c === ';') rows.push([]);
+      start = i + 1;
+    }
+  }
+  return { tex: '\\begin{bmatrix}' + rows.map((r) => r.join(' & ')).join(' \\\\ ') + '\\end{bmatrix}', next: close + 1 };
+}
 
 /** LaTeX for an expression (or one input of a function). Throws on unknown symbols. */
 function convert(text) {
@@ -98,6 +150,10 @@ function convert(text) {
       const { args, next } = call(i);
       out += paren(args.join(','));
       i = next;
+    } else if (c === '[') {
+      const m = matrix(text, i, convert);
+      out += m.tex;
+      i = m.next;
     } else if (c === '^') {
       const p = power(i + 1);
       out += '^{' + p.tex + '}';

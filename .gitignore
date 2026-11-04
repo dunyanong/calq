@@ -61,6 +61,7 @@ Thumbs.db
 *.swp
 *~
 .claude/
+Writing/
 
 # Prototype reference files
 ref_codes_will_delete_soon_myself/

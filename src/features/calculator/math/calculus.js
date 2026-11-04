@@ -56,9 +56,10 @@ function gk15(f, a, b) {
  * x = a + (b−a)(3t² − 2t³) packs the samples towards both limits, so endpoint
  * singularities such as ∫(1/√x, 0, 1) or ∫(1/√(1−x²), −1, 1) converge.
  * @param {(x: number) => number} f
+ * @param {{ tol?: number, maxEvals?: number }} [options] looser tol for nested integrals
  * @returns {number} NaN when f is not finite inside (a, b) or it does not converge
  */
-export function integrate(f, a, b) {
+export function integrate(f, a, b, { tol = TOL, maxEvals = MAX_EVALS } = {}) {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
   if (a === b) return 0;
   const w = b - a;
@@ -87,13 +88,13 @@ export function integrate(f, a, b) {
       }
       // a sum can overflow even when every sample is finite (∫(1/x, 0, 1))
       if (!Number.isFinite(total) || !Number.isFinite(error) || !Number.isFinite(abs)) return NaN;
-      if (error <= TOL * abs) {
+      if (error <= tol * abs) {
         // cancellation noise: ∫(sin(x), 0, 100π) is 0, not 1.5×10^-13
-        return Math.abs(total) <= TOL * abs ? 0 : total;
+        return Math.abs(total) <= tol * abs ? 0 : total;
       }
       const m = (worst.a + worst.b) / 2;
       // out of budget or cannot split further: diverges (∫(tan x, 0, π)) or oscillates forever
-      if (evals >= MAX_EVALS || m === worst.a || m === worst.b) return NaN;
+      if (evals >= maxEvals || m === worst.a || m === worst.b) return NaN;
       segs.splice(segs.indexOf(worst), 1, gk15(g, worst.a, m), gk15(g, m, worst.b));
     }
   } catch (e) {

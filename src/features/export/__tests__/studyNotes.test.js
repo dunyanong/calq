@@ -118,21 +118,14 @@ describe('checkNotes', () => {
 });
 
 describe('makeStudyNotes', () => {
-  test('checked workings from the steps pipeline, then the explanations', async () => {
-    explainSteps.mockResolvedValue([
-      { parts: ['sin(30)'], note: 'Sine of 30°' },
-      { parts: ['sin(30)²'], note: 'Square it' },
-      { parts: ['3×sin(30)²'], note: 'Multiply' },
-      { parts: ['2+3×sin(30)²'], note: 'Add' },
-    ]);
+  test('workings worked out on the device, then the explanations (no steps AI calls)', async () => {
     studyNotes.mockResolvedValue({ title: 'Notes', sections: [{ n: 1, title: 'Order', why: ['a.', 'b.', 'c.', 'd.'] }] });
     const phases = [];
     const items = [item('2+3×sin(30)²', '2.75'), item('5+3', '8')];
     const notes = await makeStudyNotes(items, { onPhase: (p) => phases.push(p) });
 
-    expect(phases).toEqual(['steps', 'notes']);
-    expect(explainSteps).toHaveBeenCalledTimes(1); // 5+3 needs no workings
-    expect(explainSteps).toHaveBeenCalledWith('2+3×sin(30)²', 'deg');
+    expect(phases).toEqual(['notes']);
+    expect(explainSteps).not.toHaveBeenCalled();
     expect(studyNotes).toHaveBeenCalledWith([
       {
         expr: '2+3×sin(30)²',
@@ -140,23 +133,27 @@ describe('makeStudyNotes', () => {
         angle: 'deg',
         workings: [
           { label: 'Sine of 30°', expr: '2+3×0.5²' },
-          { label: 'Square it', expr: '2+3×0.25' },
+          { label: 'Powers first', expr: '2+3×0.25' },
           { label: 'Multiply', expr: '2+0.75' },
           { label: 'Add', expr: '= 2.75' },
         ],
       },
-      { expr: '5+3', result: '8', angle: 'deg', workings: [] },
+      { expr: '5+3', result: '8', angle: 'deg', workings: [] }, // 5+3 needs no workings
     ]);
     expect(notes.sections[0].workings.map((w) => w.why)).toEqual(['a.', 'b.', 'c.', 'd.']);
     expect(notes.all).toBe(items);
   });
 
-  test('a plan that fails the check or a failed steps call means no workings, not no notes', async () => {
-    explainSteps.mockResolvedValueOnce([{ parts: ['3+4'], note: 'Add' }]); // wrong order for 2×3+4
-    explainSteps.mockRejectedValueOnce(new Error('Daily limit reached, try again tomorrow'));
+  test('every calculation with workings gets them, hard arithmetic too', async () => {
     studyNotes.mockResolvedValue({ sections: [] });
     const notes = await makeStudyNotes([item('2×3+4', '10'), item('489×73', '35697')]);
-    expect(studyNotes.mock.calls[0][0].map((x) => x.workings)).toEqual([[], []]);
+    expect(studyNotes.mock.calls[0][0].map((x) => x.workings)).toEqual([
+      [
+        { label: 'Multiply', expr: '6+4' },
+        { label: 'Add', expr: '= 10' },
+      ],
+      [{ label: 'Multiply', expr: '= 35697' }],
+    ]);
     expect(notes.sections).toHaveLength(2);
   });
 

@@ -83,9 +83,9 @@ describe('field validation', () => {
     const { pinned, ...missing } = item();
     return rejects(missing);
   });
-  test('expression over 200 characters', () => rejects(item({ expr: '1'.repeat(201) })));
+  test('expression over 2000 characters', () => rejects(item({ expr: '1'.repeat(2001) })));
   test('empty expression', () => rejects(item({ expr: '' })));
-  test('result over 200 characters', () => rejects(item({ result: '9'.repeat(201) })));
+  test('result over 2000 characters', () => rejects(item({ result: '9'.repeat(2001) })));
   test('unknown angle unit', () => rejects(item({ angle: 'turn' })));
   test('pinned not a boolean', () => rejects(item({ pinned: 'yes' })));
   test('timestamps not integers', () => rejects(item({ createdAt: 'today' })));
@@ -93,8 +93,8 @@ describe('field validation', () => {
   test('gradian angle unit is allowed', () =>
     assertSucceeds(setDoc(itemRef(db('alice'), 'alice', 'calc-grad'), item({ angle: 'grad' }))));
 
-  test('200-character expression is allowed', () =>
-    assertSucceeds(setDoc(itemRef(db('alice'), 'alice', 'calc-new'), item({ expr: '1'.repeat(200) }))));
+  test('2000-character expression is allowed (matrices, SVD results)', () =>
+    assertSucceeds(setDoc(itemRef(db('alice'), 'alice', 'calc-new'), item({ expr: '1'.repeat(2000) }))));
 
   test('update cannot change createdAt', () =>
     assertFails(updateDoc(itemRef(db('alice'), 'alice'), { createdAt: 1, updatedAt: 1759600009999 })));

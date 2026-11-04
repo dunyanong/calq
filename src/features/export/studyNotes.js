@@ -1,20 +1,19 @@
 // AI study notes for the export ("Include AI explanation?" → With AI explanation).
 //
 // Same rule as the rest of the app: the model writes only prose. The workings come
-// from stepsFromPlan, which recomputes every value with math.js; results come from
+// from localSteps, worked out on the device with math.js; results come from
 // the saved calculations. Every sentence the model writes is checked, and dropped if
 //   - it has a number that is not in its calculation (or a small count / angle fact)
 //   - it says what an expression is worth (`A=B`, "`A` gives 2") and the engine disagrees
 // so a miscalculated, invented or misattributed value never reaches the notes.
-import { needsSteps, stepsFromPlan } from '@/features/calculator/math/aiSteps';
+import { localSteps, needsSteps } from '@/features/calculator/math/aiSteps';
 import { evaluate } from '@/features/calculator/math/engine';
 import { normalizeExpr } from '@/features/calculator/math/normalize';
-import { explainSteps, studyNotes } from '@/services/ai';
+import { studyNotes } from '@/services/ai';
 
 /** Formats that become study notes; CSV and Text always export as they are. */
 export const AI_FORMATS = ['markdown', 'latex', 'pdf'];
 export const MAX_NOTE_ITEMS = 20; // same limit as studyNotes in functions/index.js
-const STEP_CALLS = 4; // explainSteps calls at a time
 
 // Numbers the prose may use without them being in the calculation: small counts and
 // angle facts (special angles, right angle, half and full turn in degrees and gradians).
@@ -110,33 +109,14 @@ export function guard(text, allowed, max, angles = []) {
   return out;
 }
 
-/** Runs fn over list with at most limit calls in flight; results keep their order. */
-async function mapLimit(list, limit, fn) {
-  const out = new Array(list.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < list.length) {
-      const i = next++;
-      out[i] = await fn(list[i], i);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker));
-  return out;
-}
-
 /**
- * Checked workings for one calculation (the same ones the hold panel shows),
- * without step 1 (the expression itself): [{ label, expr }], or [] when there are
- * none, the plan did not check out, or the steps call failed (quota, network).
+ * Workings for one calculation (the app's own steps, as the hold panel shows them),
+ * without step 1 (the expression itself): [{ label, expr }], or [] when there are none.
  */
-async function workingsFor(item) {
+function workingsFor(item) {
   if (!needsSteps(item.expr)) return [];
-  try {
-    const steps = stepsFromPlan(item.expr, item.result, item.angle, await explainSteps(item.expr, item.angle));
-    return steps ? steps.slice(1).map((s) => ({ label: s.label.replace(/^Step \d+ — /, ''), expr: s.expr })) : [];
-  } catch {
-    return [];
-  }
+  const steps = localSteps(item.expr, item.result, item.angle);
+  return steps ? steps.slice(1).map((s) => ({ label: s.label.replace(/^Step \d+ — /, ''), expr: s.expr })) : [];
 }
 
 /**
@@ -187,15 +167,14 @@ export function checkNotes(reply, picked, workings, all) {
 }
 
 /**
- * Study notes for the most recent MAX_NOTE_ITEMS of items: checked workings first
- * (cached per session, like the hold panel's), then the explanations.
- * @param {(phase: 'steps'|'notes') => void} [onPhase]  for the progress message
+ * Study notes for the most recent MAX_NOTE_ITEMS of items: workings first (on the
+ * device, instant), then the explanations.
+ * @param {(phase: 'notes') => void} [onPhase]  for the progress message
  * @returns {Promise<ReturnType<typeof checkNotes>>}  throws a user-facing Error from services/ai
  */
 export async function makeStudyNotes(items, { onPhase = () => {} } = {}) {
   const picked = items.slice(-MAX_NOTE_ITEMS);
-  if (picked.some((it) => needsSteps(it.expr))) onPhase('steps');
-  const workings = await mapLimit(picked, STEP_CALLS, workingsFor);
+  const workings = picked.map(workingsFor);
   onPhase('notes');
   const reply = await studyNotes(
     picked.map((it, i) => ({ expr: it.expr, result: it.result, angle: it.angle, workings: workings[i] })),

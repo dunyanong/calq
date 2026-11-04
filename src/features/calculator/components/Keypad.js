@@ -1,17 +1,33 @@
-// Dark keypad: drag handle, SHIFT/ALPHA/angle-unit bar with cursor keys, two swipeable
-// pages of keys, and the page footer. Casio layout in the app's colours:
+// Dark keypad: drag handle, SHIFT/ALPHA/angle-unit bar with cursor keys, swipeable
+// pages of keys (numeric, scientific, matrix · calculus, solve · discrete), and the page footer. Casio layout in the app's colours:
 // greys plus the sky-blue accent for =, SHIFT and DEL/AC.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import KeyButton, { tick } from './KeyButton';
 import { angleMode } from '@/components/AngleBadge';
 import { CameraIcon, ChevronLeft, ChevronRight } from '@/components/Icons';
-import { NUMERIC_ROWS, SCIENTIFIC_ROWS, faceSize, isLetterMode, resolveKey } from '@/features/calculator/math/keys';
+import {
+  MATRIX_ROWS,
+  NUMERIC_ROWS,
+  SCIENTIFIC_ROWS,
+  SOLVE_ROWS,
+  faceSize,
+  isLetterMode,
+  resolveKey,
+} from '@/features/calculator/math/keys';
 import { F } from '@/theme/fonts';
 import { dark, pad } from '@/theme/tokens';
 
 const MODE_COLORS = { shift: pad.shiftOn, alpha: pad.alphaOn, sto: pad.alphaOn, rcl: pad.alphaOn, hyp: pad.hypOn };
 const MODE_LABELS = { shift: 'SHIFT ON', alpha: 'ALPHA ON', sto: 'STO', rcl: 'RCL', hyp: 'HYP' };
+
+export const PAGES = [
+  { rows: NUMERIC_ROWS, cols: 5, label: 'NUMERIC' },
+  { rows: SCIENTIFIC_ROWS, cols: 6, label: 'SCIENTIFIC' },
+  { rows: MATRIX_ROWS, cols: 6, label: 'MATRIX · CALCULUS' },
+  { rows: SOLVE_ROWS, cols: 6, label: 'SOLVE · DISCRETE' },
+];
+const LAST = PAGES.length - 1;
 
 function KeyRows({ rows, cols, mode, output, onKey }) {
   const gap = cols === 5 ? 7 : 6;
@@ -147,7 +163,7 @@ export default function Keypad({
   }, [letters]);
 
   const goTo = (p) => {
-    if (p < 0 || p > 1) return;
+    if (p < 0 || p > LAST) return;
     setPage(p);
     scroller.current?.scrollTo({ x: p * width, animated: true });
   };
@@ -228,14 +244,13 @@ export default function Keypad({
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
-          contentContainerStyle={{ width: width * 2 }}
+          contentContainerStyle={{ width: width * PAGES.length }}
         >
-          <View style={{ width }}>
-            <KeyRows rows={NUMERIC_ROWS} cols={5} mode={mode} output={output} onKey={onKey} />
-          </View>
-          <View style={{ width }}>
-            <KeyRows rows={SCIENTIFIC_ROWS} cols={6} mode={mode} output={output} onKey={onKey} />
-          </View>
+          {PAGES.map((pg) => (
+            <View key={pg.label} style={{ width }}>
+              <KeyRows rows={pg.rows} cols={pg.cols} mode={mode} output={output} onKey={onKey} />
+            </View>
+          ))}
         </ScrollView>
       </View>
 
@@ -249,18 +264,18 @@ export default function Keypad({
           <ChevronLeft color={pad.scanInk} />
         </Pressable>
         <View style={styles.dots}>
-          {[0, 1].map((p) => (
+          {PAGES.map((_, p) => (
             <Pressable key={p} onPress={() => goTo(p)} hitSlop={8}>
               <View style={[styles.dot, { width: page === p ? 18 : 6, backgroundColor: page === p ? pad.dotOn : pad.dotOff }]} />
             </Pressable>
           ))}
-          <Text style={styles.pageLabel}>{page === 0 ? 'NUMERIC' : 'SCIENTIFIC'}</Text>
+          <Text style={styles.pageLabel}>{PAGES[page]?.label}</Text>
         </View>
         <Pressable
           onPress={() => goTo(page + 1)}
-          disabled={page === 1}
+          disabled={page === LAST}
           accessibilityLabel="Next page"
-          style={({ pressed }) => [styles.arrow, { opacity: page === 1 ? 0.3 : pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [styles.arrow, { opacity: page === LAST ? 0.3 : pressed ? 0.6 : 1 }]}
         >
           <ChevronRight color={pad.scanInk} />
         </Pressable>

@@ -1,5 +1,7 @@
 // Formulas instead of numbers:
 //   d/dx(f) without a point -> f′(x), worked out here with math.js derivative
+//   ∂x(f), ∂y(f), ∂z(f)     -> partial derivatives of f(x, y, z), the same way
+//   taylor(f, a, n)         -> the Taylor polynomial of f about x = a, up to (x−a)ⁿ
 //   ∫(f) without limits     -> F(x)+C, proposed by the AI (functions/index.js)
 //
 // Nothing is shown unchecked. A derivative is printed back into calculator
@@ -28,12 +30,44 @@ const sym = (name) => new math.SymbolNode(name);
 const call = (name, args) => new math.FunctionNode(name, args);
 const op = (o, fn, args) => new math.OperatorNode(o, fn, args);
 const usesX = (node) => node.filter((n) => math.isSymbolNode(n) && n.name === 'x').length > 0;
+const VARS = ['x', 'y', 'z'];
+const usesVars = (node) => node.filter((n) => math.isSymbolNode(n) && VARS.includes(n.name)).length > 0;
+const PARTIAL = { pdx: 'x', pdy: 'y', pdz: 'z' };
+const MAX_TAYLOR = 12;
 
 const TRIG = { tsin: 'sin', tcos: 'cos', ttan: 'tan' };
 const ARC = { tasin: 'asin', tacos: 'acos', tatan: 'atan' };
 const NUMERIC = new Set(['integ', 'deriv', 'sumx', 'prodx']);
 
 class Unsupported extends Error {}
+// a mistake the user can fix, shown as it is
+class Shown extends Error {}
+
+/** taylor(f, a, n) as a polynomial tree: Σ f⁽ᵏ⁾(a)/k! (x−a)ᵏ. */
+function taylorTree(node, angle) {
+  if (node.args.length !== 3) throw new Shown('taylor needs (f, a, n)');
+  const a = evaluateNode(node.args[1], angle);
+  const n = evaluateNode(node.args[2], angle);
+  if (!Number.isInteger(n) || n < 0 || n > MAX_TAYLOR) throw new Shown(`taylor needs a whole n from 0 to ${MAX_TAYLOR}`);
+  const scope = { [UNIT]: RAD_PER[angle] ?? 1, x: a };
+  const shift = a === 0 ? sym('x') : op('-', 'subtract', [sym('x'), new math.ConstantNode(a)]);
+  let d = toStandard(node.args[0], angle);
+  let factorial = 1;
+  let sum = null;
+  for (let k = 0; k <= n; k++) {
+    if (k > 0) {
+      d = math.derivative(d, 'x');
+      factorial *= k;
+    }
+    const c = d.evaluate(scope) / factorial;
+    if (typeof c !== 'number' || !Number.isFinite(c)) throw new Shown('f has no Taylor series at that point');
+    if (Math.abs(c) < 1e-14) continue;
+    const power = k === 0 ? null : k === 1 ? shift : op('^', 'pow', [shift, new math.ConstantNode(k)]);
+    const term = !power ? new math.ConstantNode(c) : op('*', 'multiply', [new math.ConstantNode(c), power]);
+    sum = sum ? op('+', 'add', [sum, term]) : term;
+  }
+  return sum || new math.ConstantNode(0);
+}
 
 /**
  * Engine tree (tsin, logb, nroot …) -> standard math.js functions that
@@ -46,6 +80,10 @@ function toStandard(node, angle) {
     if (name === 'deriv' && node.args.length === 1) {
       return math.derivative(toStandard(node.args[0], angle), 'x', { simplify: false });
     }
+    if (PARTIAL[name] && node.args.length === 1) {
+      return math.derivative(toStandard(node.args[0], angle), PARTIAL[name], { simplify: false });
+    }
+    if (name === 'taylor') return taylorTree(node, angle);
     if (NUMERIC.has(name)) {
       // a numeric ∫, d/dx, Σ or Π with fixed limits is just a number here
       if (node.args.slice(1).some(usesX)) throw new Unsupported();
@@ -137,7 +175,7 @@ function print(node, angle) {
     return constant(v);
   }
   if (math.isSymbolNode(node)) {
-    const s = { x: 'x', pi: 'π', e: 'e', [UNIT]: UNIT_TEXT[angle] }[node.name];
+    const s = { x: 'x', y: 'y', z: 'z', pi: 'π', e: 'e', [UNIT]: UNIT_TEXT[angle] }[node.name];
     if (!s) throw new Unsupported();
     return [s, P.atom];
   }
@@ -161,7 +199,7 @@ function print(node, angle) {
       if (math.isConstantNode(p) && Number(p.value) === -1) return ['−' + wrap(print(q, angle), P.mul), P.neg];
       const l = print(p, angle);
       const r = print(q, angle);
-      // a factor without x leads: 2x, 3sin(x), 2πx, π(x+1), (π÷180)cos(x); otherwise an explicit ×
+      // a factor without x leads: 2x, 3sin(x), 2πx, π(x+1), (π÷180)cos(x), 2yx; otherwise an explicit ×
       // (a top-level ÷ would swallow what follows: 1÷ln(2)×x must keep its ×)
       const coefficient = !usesX(p) && (l[1] === P.atom || !l[0].includes('÷'));
       if (coefficient && !/^[\d.−]/.test(wrap(r, P.mul))) {
@@ -225,39 +263,49 @@ function matchesAtSamples(got, want, tol, min) {
   return valid >= min;
 }
 
-/** True if the calculator expression `text` equals ref(x) at the sample points. */
+// y and z at each sample x, for formulas in several variables (spread like SAMPLES)
+const yAt = (x) => 0.61 + 0.37 * x;
+const zAt = (x) => 1.3 - 0.29 * x;
+
+/** True if the calculator expression `text` equals ref(x, y, z) at the sample points. */
 function sameFunction(text, angle, ref) {
   const g = fnOfExpr(text, angle);
-  return !!g && matchesAtSamples(g, ref, 1e-8, 3);
+  return !!g && matchesAtSamples((x) => g(x, yAt(x), zAt(x)), (x) => ref(x, yAt(x), zAt(x)), 1e-8, 3);
 }
 
+const isFormulaCall = (n) =>
+  math.isFunctionNode(n) &&
+  (((n.fn.name === 'deriv' || PARTIAL[n.fn.name]) && n.args.length === 1) || n.fn.name === 'taylor');
+
 /**
- * d/dx(f) without a point, anywhere in the expression ("d/dx(x³)×2" too).
+ * d/dx(f) or ∂x(f) without a point, or taylor(f, a, n), anywhere in the
+ * expression ("d/dx(x³)×2" too).
  * @returns {null | {text: string} | {value: number} | {error: string}}
- *   null when there is no such d/dx (evaluate as usual); value when the
- *   result has no x left, e.g. d/dx(3x) = 3
+ *   null when there is no such call (evaluate as usual); value when the
+ *   result has no variable left, e.g. d/dx(3x) = 3
  */
 export function symbolicDerivative(expr, angle = 'deg') {
-  if (!expr.includes('d/dx(')) return null;
+  if (!/d\/dx\(|∂|taylor\(/.test(expr)) return null;
   let tree;
   try {
     tree = math.parse(toMathjs(expr));
   } catch {
     return null; // let evaluate() report the syntax error
   }
-  if (!tree.filter((n) => math.isFunctionNode(n) && n.fn.name === 'deriv' && n.args.length === 1).length) return null;
+  if (!tree.filter(isFormulaCall).length) return null;
 
   try {
     const result = math.simplify(reciprocals(toStandard(tree, angle)), RULES);
-    const at = (x) => result.evaluate({ [UNIT]: RAD_PER[angle] ?? 1, x });
-    if (!usesX(result)) {
+    const at = (x, y, z) => result.evaluate({ [UNIT]: RAD_PER[angle] ?? 1, x, y, z });
+    if (!usesVars(result)) {
       const v = at(0);
       return typeof v === 'number' && Number.isFinite(v) ? { value: v } : { error: 'Check the expression' };
     }
     const text = print(result, angle)[0];
     if (!sameFunction(text, angle, at)) throw new Unsupported(); // never show a misprinted formula
     return { text };
-  } catch {
+  } catch (e) {
+    if (e instanceof Shown) return { error: e.message };
     return { error: 'No formula for this one. Add a point, e.g. d/dx(f(x), 2)' };
   }
 }

@@ -6,9 +6,10 @@ const KEY = 'calq.settings';
 export const DEFAULT_SETTINGS = {
   angle: 'deg', // 'deg' | 'rad' | 'grad'
   output: 'dec', // 'dec' | 'frac'
+  numbers: 'real', // 'real' | 'complex' (√(−4) = 2i)
   dark: false,
   // calculator memory, kept here so it survives a restart like on a Casio
-  ans: 0,
+  ans: 0, // a number, or the text of a complex / matrix result ("3+4i", "[1,2;3,4]")
   vars: { A: 0, B: 0, C: 0, D: 0, F: 0, M: 0 },
   // New session (refresh in the calculator header): the calculator shows calculations from this time on
   sessionStart: 0,
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 const EXPORT_TO = ['share', 'drive'];
+const NUMBERS = ['real', 'complex'];
 
 export async function loadSettings() {
   try {
@@ -32,6 +34,8 @@ export async function loadSettings() {
     // an unknown unit (corrupt or from a newer build) would be read as radians by the engine
     if (!ANGLE_UNITS.includes(settings.angle)) settings.angle = DEFAULT_SETTINGS.angle;
     if (!EXPORT_TO.includes(settings.exportTo)) settings.exportTo = DEFAULT_SETTINGS.exportTo;
+    if (!NUMBERS.includes(settings.numbers)) settings.numbers = DEFAULT_SETTINGS.numbers;
+    if (typeof settings.ans !== 'number' && typeof settings.ans !== 'string') settings.ans = DEFAULT_SETTINGS.ans;
     if (typeof settings.drive?.uid !== 'string' || typeof settings.drive.folderId !== 'string') settings.drive = null;
     settings.ai = settings.ai !== false;
     delete settings.aiNotes; // replaced by ai (exports now ask each time)

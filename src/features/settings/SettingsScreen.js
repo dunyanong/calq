@@ -1,4 +1,4 @@
-// Settings screen: account, angle unit, output format, appearance, AI integration (the AI switch), Google Drive.
+// Settings screen: account, angle unit, real / complex numbers, output format, appearance, AI integration (the AI switch), Google Drive.
 import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -167,7 +167,7 @@ function DriveCard({ t, user }) {
 }
 
 export default function Settings() {
-  const { theme: t, angle, output, dark, ai, update } = useSettings();
+  const { theme: t, angle, output, numbers, dark, ai, update } = useSettings();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user, signIn, signOut } = useAuth();
@@ -238,6 +238,19 @@ export default function Settings() {
             value={angle}
             onChange={(v) => update({ angle: v })}
             options={ANGLE_UNITS.map((u) => ({ value: u, label: ANGLE_MODES[u].label }))}
+          />
+        </Card>
+        <Card t={t} style={[styles.pad, styles.nextCard]}>
+          <Text style={[styles.rowTitle, { color: t.text }]}>Numbers</Text>
+          <Text style={[styles.rowSub, { color: t.sub }]}>Complex gives √(−4) = 2i; an i in a calculation always does</Text>
+          <Segmented
+            t={t}
+            value={numbers}
+            onChange={(v) => update({ numbers: v })}
+            options={[
+              { value: 'real', label: 'Real' },
+              { value: 'complex', label: 'Complex' },
+            ]}
           />
         </Card>
 
@@ -333,6 +346,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#fff', fontSize: 19, fontFamily: F.bodyHeavy },
   name: { fontSize: 18, fontFamily: F.bodyBold },
   email: { fontSize: 14, fontFamily: F.body, marginTop: 2 },
+  nextCard: { marginTop: 10 },
   section: { fontSize: 12, fontFamily: F.bodyHeavy, letterSpacing: 1.1, paddingTop: 22, paddingHorizontal: 4, paddingBottom: 8 },
   rowTitle: { fontSize: 16, fontFamily: F.bodySemi },
   rowSub: { fontSize: 13, fontFamily: F.body, marginTop: 2 },

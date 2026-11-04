@@ -61,3 +61,62 @@ export function operandIn(text, start, end, v) {
   const merges = (before !== '' && !OPEN_END.test(before)) || /^[\d.]/.test(text.slice(end));
   return merges ? '(' + s + ')' : s;
 }
+
+// ---- results that are not a single real number (engine.js compute) -------------
+
+/** A number inside a complex number or matrix: − for minus, ÷ for fractions, so it reads back in. */
+const entry = (v, output) => formatNumber(v, output).replace('/', '÷');
+
+/** 3+4i, 3−4i, 2i, −i. */
+function formatComplex({ re, im }, output) {
+  const imag = Math.abs(im) === 1 ? '' : entry(Math.abs(im), output);
+  const i = (imag.includes('÷') || imag.includes('×') ? '(' + imag + ')' : imag) + 'i';
+  if (re === 0) return (im < 0 ? '−' : '') + i;
+  return entry(re, output) + (im < 0 ? '−' : '+') + i;
+}
+
+/** An entry of a matrix: a+bi is bracketed so [1,(2+i)] reads back as one entry. */
+const cellText = (v, output) =>
+  typeof v === 'number' ? entry(v, output) : v.re === 0 ? formatComplex(v, output) : '(' + formatComplex(v, output) + ')';
+
+/** [1,2,3] for a vector, [1,2;3,4] for a matrix (the notation the keys type). */
+function formatMatrix(a, output) {
+  if (!Array.isArray(a[0])) return '[' + a.map((v) => cellText(v, output)).join(',') + ']';
+  return '[' + a.map((row) => row.map((v) => cellText(v, output)).join(',')).join(';') + ']';
+}
+
+/**
+ * Any compute() result as text: 2.5, 3+4i, [1,2;3,4], x=1.5, y=−2, min=3.
+ * @param {ReturnType<import('./engine').compute>} res
+ * @param {'dec'|'frac'} output
+ */
+export function formatValue(res, output = 'dec') {
+  switch (res?.kind) {
+    case 'number':
+      return formatNumber(res.value, output);
+    case 'complex':
+      return formatComplex(res.value, output);
+    case 'matrix':
+      return formatMatrix(res.value, output);
+    case 'parts':
+      return res.value.map(([name, r]) => (name ? name + '=' : '') + formatValue(r, output)).join(', ');
+    case 'text':
+      return res.value;
+    default:
+      return 'Error';
+  }
+}
+
+/**
+ * Rows of a matrix result, padded into columns for the display, or null when the
+ * result is not one matrix ([1,2;3,4] -> ['1  2', '3  4']).
+ */
+export function matrixRows(result) {
+  const m = /^\[([^[\]]*;[^[\]]*)\]$/.exec(result);
+  if (!m) return null;
+  const rows = m[1].split(';').map((r) => r.split(','));
+  const cols = rows[0].length;
+  if (cols > 8 || rows.some((r) => r.length !== cols)) return null;
+  const width = Array.from({ length: cols }, (_, j) => Math.max(...rows.map((r) => r[j].length)));
+  return rows.map((r) => r.map((c, j) => c.padStart(width[j])).join('  '));
+}

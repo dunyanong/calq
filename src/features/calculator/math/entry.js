@@ -22,6 +22,49 @@ const TEMPLATES = {
   'gcd(': ['First number', 'Second number'],
   'lcm(': ['First number', 'Second number'],
   'RanInt(': ['From', 'To'],
+  // advanced pages (advanced.js)
+  'solve(': ['A: the matrix, e.g. [1,2;3,4]', 'b: the right-hand side, e.g. [5,6]'],
+  'dot(': ['First vector', 'Second vector'],
+  'cross(': ['First vector [a,b,c]', 'Second vector'],
+  'kron(': ['First matrix', 'Second matrix'],
+  '∬(': ['∬ f(x,y) dy dx', 'x from', 'x to', 'y from (may use x)', 'y to (may use x)'],
+  '∭(': ['∭ f(x,y,z) dz dy dx', 'x from', 'x to', 'y from (may use x)', 'y to (may use x)', 'z from (may use x, y)', 'z to (may use x, y)'],
+  '∂x(': ['∂/∂x of f(x,y,z)', 'At x = · leave the point empty for the formula', 'y =', 'z ='],
+  '∂y(': ['∂/∂y of f(x,y,z)', 'At x = · leave the point empty for the formula', 'y =', 'z ='],
+  '∂z(': ['∂/∂z of f(x,y,z)', 'At x = · leave the point empty for the formula', 'y =', 'z ='],
+  'grad(': ['∇f of f(x,y,z)', 'At the point, e.g. [1,2]'],
+  'jac(': ['Functions [f1,f2,…] of x, y, z', 'At the point, e.g. [1,2]'],
+  'hess(': ['Hessian of f(x,y,z)', 'At the point, e.g. [1,2]'],
+  'div(': ['Field [P,Q,R] of x, y, z', 'At the point, e.g. [1,2,3]'],
+  'curl(': ['Field [P,Q,R] of x, y, z', 'At the point, e.g. [1,2,3]'],
+  'lap(': ['∇² of f(x,y,z)', 'At the point, e.g. [1,2]'],
+  'taylor(': ['Taylor series of f(x)', 'About x =', 'Up to the power n (0 to 12)'],
+  'lim(': ['Limit of f(x)', 'As x → (∞ on SHIFT ᵀ)'],
+  'ode(': ['y′ = f(x,y)', 'Start x₀', 'y(x₀)', 'Find y at x ='],
+  'ode2(': ['y″ = f(x,y,y′)', 'Start x₀', 'y(x₀)', 'y′(x₀)', 'Find y at x ='],
+  'bvp(': ['y″ = f(x,y,y′)', 'a', 'y(a)', 'b', 'y(b)', 'Find y at x ='],
+  'min(': ['Minimise f(x) or f(x,y)', 'From a, or a start point [x,y]', 'To b · leave empty with a start point'],
+  'max(': ['Maximise f(x) or f(x,y)', 'From a, or a start point [x,y]', 'To b · leave empty with a start point'],
+  'minc(': ['Minimise f(x,y)', 'Constraints, e.g. [x+y=1,x≥0]', 'Start point, e.g. [0,0]'],
+  'maxc(': ['Maximise f(x,y)', 'Constraints, e.g. [x+y=1,x≥0]', 'Start point, e.g. [0,0]'],
+  'lp(': ['c: maximise c·x', 'A in Ax ≤ b (x ≥ 0)', 'b'],
+  'ilp(': ['c: maximise c·x, whole x', 'A in Ax ≤ b (x ≥ 0)', 'b'],
+  'root(': ['f(x) = 0, or an equation', 'Search from a', 'To b'],
+  'nsolve(': ['f(x) = 0, or an equation', 'Guess'],
+  'mod(': ['a', 'm'],
+  'modinv(': ['a', 'm'],
+  'modpow(': ['Base', 'Power', 'm'],
+  'and(': ['p (0 or 1)', 'q (0 or 1)'],
+  'or(': ['p (0 or 1)', 'q (0 or 1)'],
+  'xor(': ['p (0 or 1)', 'q (0 or 1)'],
+  'implies(': ['p (0 or 1)', 'q (0 or 1)'],
+  'rec(': ['Next term from n and the term x', 'x₀', 'Find term N'],
+  'stirling(': ['n', 'k'],
+  'union(': ['Set A, e.g. [1,2,3]', 'Set B'],
+  'inter(': ['Set A, e.g. [1,2,3]', 'Set B'],
+  'setdiff(': ['Set A, e.g. [1,2,3]', 'Set B'],
+  'path(': ['W: weight matrix (0 = no edge)', 'From vertex', 'To vertex'],
+  'flow(': ['C: capacity matrix', 'Source vertex', 'Sink vertex'],
 };
 
 // Short names drawn inside empty boxes: ∫( f(x) , from , to ).
@@ -37,17 +80,67 @@ const LABELS = {
   'gcd(': ['a', 'b'],
   'lcm(': ['a', 'b'],
   'RanInt(': ['from', 'to'],
+  'solve(': ['A', 'b'],
+  'dot(': ['u', 'v'],
+  'cross(': ['u', 'v'],
+  'kron(': ['A', 'B'],
+  '∬(': ['f(x,y)', 'x from', 'x to', 'y from', 'y to'],
+  '∭(': ['f', 'x from', 'x to', 'y from', 'y to', 'z from', 'z to'],
+  '∂x(': ['f', 'x', 'y', 'z'],
+  '∂y(': ['f', 'x', 'y', 'z'],
+  '∂z(': ['f', 'x', 'y', 'z'],
+  'grad(': ['f', 'point'],
+  'jac(': ['[f1,f2]', 'point'],
+  'hess(': ['f', 'point'],
+  'div(': ['[P,Q,R]', 'point'],
+  'curl(': ['[P,Q,R]', 'point'],
+  'lap(': ['f', 'point'],
+  'taylor(': ['f(x)', 'about', 'n'],
+  'lim(': ['f(x)', 'x →'],
+  'ode(': ['f(x,y)', 'x₀', 'y₀', 'at x'],
+  'ode2(': ['f(x,y,y′)', 'x₀', 'y₀', 'y′₀', 'at x'],
+  'bvp(': ['f(x,y,y′)', 'a', 'y(a)', 'b', 'y(b)', 'at x'],
+  'min(': ['f', 'a or start', 'b'],
+  'max(': ['f', 'a or start', 'b'],
+  'minc(': ['f', 'constraints', 'start'],
+  'maxc(': ['f', 'constraints', 'start'],
+  'lp(': ['c', 'A', 'b'],
+  'ilp(': ['c', 'A', 'b'],
+  'root(': ['f(x)', 'from', 'to'],
+  'nsolve(': ['f(x)', 'guess'],
+  'mod(': ['a', 'm'],
+  'modinv(': ['a', 'm'],
+  'modpow(': ['base', 'power', 'm'],
+  'and(': ['p', 'q'],
+  'or(': ['p', 'q'],
+  'xor(': ['p', 'q'],
+  'implies(': ['p', 'q'],
+  'rec(': ['f(n,x)', 'x₀', 'N'],
+  'stirling(': ['n', 'k'],
+  'union(': ['A', 'B'],
+  'inter(': ['A', 'B'],
+  'setdiff(': ['A', 'B'],
+  'path(': ['W', 'from', 'to'],
+  'flow(': ['C', 'source', 'sink'],
 };
+
+// Boxes from this index on may be left empty: ∂x(f,1,□,□) is ∂x at x = 1 (f of x
+// only), min(f,[0,0],□) starts from a point. All of ∂x's empty means the formula.
+const OPTIONAL_FROM = { '∂x(': 1, '∂y(': 1, '∂z(': 1, 'min(': 2, 'max(': 2 };
 
 /** What a template key types: "∫(" -> "∫(□,□,□)". */
 export const templateText = (opener) => opener + TEMPLATES[opener].map(() => BOX).join(',') + ')';
 
-/** Index of the "(" whose brackets enclose position pos, or -1. */
+// [ ] of matrices and lists nest like ( ): their commas belong to them, not to a box.
+const isOpen = (c) => c === '(' || c === '[';
+const isClose = (c) => c === ')' || c === ']';
+
+/** Index of the "(" (or "[") whose brackets enclose position pos, or -1. */
 function openBefore(text, pos) {
   let depth = 0;
   for (let i = pos - 1; i >= 0; i--) {
-    if (text[i] === ')') depth++;
-    else if (text[i] === '(') {
+    if (isClose(text[i])) depth++;
+    else if (isOpen(text[i])) {
       if (depth === 0) return i;
       depth--;
     }
@@ -59,8 +152,8 @@ function openBefore(text, pos) {
 function closeAfter(text, open) {
   let depth = 0;
   for (let i = open + 1; i < text.length; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')') {
+    if (isOpen(text[i])) depth++;
+    else if (isClose(text[i])) {
       if (depth === 0) return i;
       depth--;
     }
@@ -68,8 +161,11 @@ function closeAfter(text, open) {
   return -1;
 }
 
+// longest first, so "ilp(" is not taken for "lp(" nor "xor(" for "or("
+const OPENERS = Object.keys(TEMPLATES).sort((a, b) => b.length - a.length);
+
 /** Template opener ending at the "(" at index open, if any. */
-const openerAt = (text, open) => Object.keys(TEMPLATES).find((o) => text.slice(0, open + 1).endsWith(o));
+const openerAt = (text, open) => OPENERS.find((o) => text.slice(0, open + 1).endsWith(o));
 
 /** The template whose own argument list directly contains position pos (not one nested deeper). */
 function directTemplate(text, pos) {
@@ -95,8 +191,8 @@ export function callArgs(text, open) {
   let depth = 0;
   let start = open + 1;
   for (let i = open + 1; i < end; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')') depth--;
+    if (isOpen(text[i])) depth++;
+    else if (isClose(text[i])) depth--;
     else if (text[i] === ',' && depth === 0) {
       args.push({ start, end: i, text: text.slice(start, i) });
       start = i + 1;
@@ -193,8 +289,8 @@ function boxAt(text, pos) {
   let depth = 0;
   let index = 0;
   for (let i = t.open + 1; i < pos; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')') depth--;
+    if (isOpen(text[i])) depth++;
+    else if (isClose(text[i])) depth--;
     else if (text[i] === ',' && depth === 0) index++;
   }
   return { opener: t.opener, index };
@@ -214,7 +310,8 @@ export function boxLabel(text, i) {
 
 /**
  * The expression to work out: empty optional boxes are dropped, so
- * ∫(f,□,□) becomes ∫(f) (a formula) and d/dx(f,□) becomes d/dx(f).
+ * ∫(f,□,□) becomes ∫(f) (a formula), d/dx(f,□) becomes d/dx(f) and
+ * ∂x(f,2,3,□) becomes ∂x(f,2,3).
  * @returns {{expr: string} | {error: string}}
  */
 export function completeEntry(text) {
@@ -222,6 +319,14 @@ export function completeEntry(text) {
   // right to left, so earlier indices stay valid
   for (let i = s.length - 1; i >= 0; i--) {
     const opener = s[i] === '(' && openerAt(s, i);
+    if (OPTIONAL_FROM[opener]) {
+      const { args } = callArgs(s, i);
+      if (args[0].text === BOX) return { error: 'Type the function in the first box' };
+      let keep = args.length;
+      while (keep > OPTIONAL_FROM[opener] && args[keep - 1].text === BOX) keep--;
+      if (keep < args.length) s = s.slice(0, args[keep - 1].end) + s.slice(args[args.length - 1].end);
+      continue;
+    }
     if (opener !== '∫(' && opener !== 'd/dx(') continue;
     const { args } = callArgs(s, i);
     if (args[0].text === BOX) return { error: 'Type the function in the first box' };

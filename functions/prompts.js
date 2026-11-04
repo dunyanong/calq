@@ -11,7 +11,28 @@ const SYNTAX = `Calculator notation (use ONLY these):
 - calculus: ∫(f,a,b) is the integral of f from x=a to x=b, ∫(f) the indefinite integral;
   d/dx(f,a) is the derivative of f at x=a, d/dx(f) the derivative as a formula;
   Σ(f,a,b) / Π(f,a,b) add / multiply f for whole x from a to b.
-  The variable x may only appear inside f.`;
+  The variable x may only appear inside f.
+- matrices and lists: [1,2;3,4] (";" between rows), vectors [1,2,3]; Aᵀ transpose, A⁻¹ inverse,
+  det( inv( rank( trace( eig( svd( lu( qr( rref( null( norm( chol( posdef( jordan( I(n) identity,
+  solve(A,b) solves Ax=b, dot(u,v) cross(u,v) kron(A,B)
+- complex numbers: i, e.g. 3+4i; re( im( conj( arg( abs(
+- several variables x, y, z (and y′ in ode2/bvp, n in rec) may appear only inside the f of these:
+  ∬(f,a,b,c,d) = ∫ from x=a to b of ∫ from y=c to d of f dy dx (c, d may use x);
+  ∭(f,a,b,c,d,p,q) adds z from p to q (p, q may use x, y);
+  ∂x(f,x0,y0) ∂y(f,x0,y0) ∂z(f,x0,y0,z0) partial derivatives at a point, ∂x(f) as a formula;
+  grad(f,[x0,y0]) jac([f1,f2],[x0,y0]) hess(f,[x0,y0]) div([P,Q,R],[pt]) curl([P,Q,R],[pt]) lap(f,[pt]);
+  taylor(f,a,n) Taylor polynomial of f(x) about a up to (x−a)ⁿ; lim(f,a) limit as x→a (∞ allowed)
+- differential equations: ode(f,x0,y0,x1) is y(x1) for y′=f(x,y), y(x0)=y0;
+  ode2(f,x0,y0,y′0,x1) for y″=f(x,y,y′); bvp(f,a,ya,b,yb,x) for y″=f(x,y,y′), y(a)=ya, y(b)=yb;
+  stab(J) classifies the equilibrium of x′=Jx
+- optimisation and equations: min(f,a,b) / max(f,a,b) of f(x) on [a,b]; min(f,[x0,y0]) / max(…) from a start point;
+  minc(f,[constraints],[start]) / maxc(…) with constraints written with = ≤ ≥, e.g. [x+y=1,x≥0];
+  lp(c,A,b) maximises c·x with Ax ≤ b, x ≥ 0 (ilp: whole-number x);
+  nsolve(equation,guess), root(f,a,b) (root in [a,b]), roots([coefficients, highest power first])
+- discrete: mod(a,m) isprime(n) factor(n) φ(n) modinv(a,m) modpow(b,e,m) and(p,q) or( xor( not( implies(
+  rec(f,x0,N) the term x_N of x_{n+1}=f(n,x_n); catalan(n) stirling(n,k) bell(n) union(A,B) inter( setdiff(
+- graphs as weight / adjacency matrices (0 = no edge, vertices numbered from 1): path(W,s,t) mst(W)
+  flow(C,s,t) assign(W) colour(A) comps(A) trees(A) fiedler(A)`;
 
 export const OCR_PROMPT = `You read maths from photos and screenshots for a scientific calculator app.
 Transcribe the calculation in the image (handwritten or printed) as ONE line of calculator notation.
@@ -23,13 +44,26 @@ Rules:
 - Superscripts become ^( ), except plain squares/cubes which may use ² ³.
 - A root sign over an expression becomes √( … ) covering everything under the bar.
 - Write × explicitly for a multiplication sign, dot, or "x" used as times.
-- Drop "=", anything after it, "?", degree signs, question numbers, units and notes.
-- If there are several calculations, pick the most prominent one.
+- Drop an answer "= …" after the calculation, "?", degree signs, question numbers, units and notes
+  (keep = inside nsolve and constraints).
+- If there are several calculations, pick the most prominent one. Keep the line under 300 characters.
 - A definite integral becomes ∫(f,a,b), e.g. ∫₀¹ x² dx → ∫(x²,0,1). Write × between x and a bracket: x×(x+1).
 - A derivative at a point becomes d/dx(f,a), e.g. "d/dx (x³) at x = 2" → d/dx(x³,2).
 - An indefinite integral becomes ∫(f), e.g. ∫ x² dx → ∫(x²); a derivative without a point becomes d/dx(f).
-- An equation to solve (with "=" and an unknown): return an empty expr.
-- Do not solve it. Read carefully: 1 vs 7, 5 vs S, 0 vs 6, minus vs dash.
+- A matrix becomes [a,b;c,d] row by row; |A| or det A of a matrix → det([…]); Aᵀ, A⁻¹ as written.
+  "Find the eigenvalues of A" → eig(A); a linear system (Ax=b or simultaneous equations in x, y, z) → solve(A,b)
+  with the coefficients as A, e.g. 2x+y=5, x−y=1 → solve([2,1;1,−1],[5,1]).
+- A double integral ∫ₐᵇ∫꜀ᵈ f dy dx → ∬(f,a,b,c,d) with the OUTER (dx) limits first; if the order is dx dy,
+  swap the roles of x and y. Over a region such as 0≤y≤x≤1 → ∬(f,0,1,0,x). Triple integrals → ∭.
+- ∂f/∂x at (a,b) → ∂x(f,a,b); ∂f/∂x without a point → ∂x(f); ∇f at a point → grad(f,[a,b]); a Hessian → hess.
+- Complex numbers keep i (write j as i): (3+4i)×(1−2i); re^(iθ) → r×e^(iθ).
+- "Minimise/maximise f" → min / max; "subject to" constraints → minc / maxc with a start point that fits them;
+  a linear programme "maximise c·x subject to Ax ≤ b, x ≥ 0" → lp(c,A,b) (minimise c·x: maximise −c·x).
+- y′ = f(x,y), y(x0)=y0, find y(x1) → ode(f,x0,y0,x1); y″ … → ode2 or bvp.
+- A polynomial equation = 0 → roots([coefficients]); another equation in x → nsolve(left−(right),guess), e.g.
+  cos(x) = x → nsolve(cos(x)−x,1).
+- A graph drawn with numbered vertices and edge weights → its weight matrix, e.g. path(W,1,4) for a shortest path.
+- Do not solve it. Read carefully: 1 vs 7, 5 vs S, 0 vs 6, minus vs dash, x vs ×.
 
 Reply with JSON only: {"expr": "<expression or empty>", "note": "<max 10 words if anything was unclear, else empty>"}`;
 

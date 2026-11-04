@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Loader from '@/components/Loader';
 import { useToast } from '@/components/Toast';
+import { useAiEta } from '@/features/ai/aiEta';
 import useAiOn from '@/features/ai/useAiOn';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useSettings } from '@/features/settings/SettingsContext';
@@ -32,7 +33,6 @@ const ExportContext = createContext({
 });
 
 const PHASES = {
-  steps: 'Working out the steps…',
   notes: 'Writing study notes…',
   drive: 'Saving to Google Drive…',
 };
@@ -41,15 +41,25 @@ const PHASES = {
 const driveName = (format, notes) =>
   `${notes ? 'Calq study notes' : 'Calq history'} ${formatDate(Date.now()).replace(':', '-')}.${FORMATS[format].ext}`;
 
-/** The phase line; a new phase fades in rather than snapping. */
+// Phases that wait on the AI show how long they should take (Drive does not).
+const AI_PHASES = ['notes'];
+
+/** The phase line with its countdown; a new phase fades in rather than snapping. */
 function PhaseText({ phase }) {
   const [opacity] = useState(() => new Animated.Value(0));
   useEffect(() => {
     Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
   }, [opacity]);
+  const left = useAiEta(AI_PHASES.includes(phase) ? phase : null);
   return (
-    <Animated.Text style={[styles.text, styles.message, { opacity }]} numberOfLines={1}>
+    <Animated.Text
+      style={[styles.text, styles.message, { opacity }]}
+      numberOfLines={1}
+      // read once with the estimate, not on every tick
+      accessibilityLabel={left ? `${PHASES[phase]} ${left.spoken}` : PHASES[phase]}
+    >
       {PHASES[phase]}
+      {left && <Text style={styles.eta}>{'  ' + left.text}</Text>}
     </Animated.Text>
   );
 }
@@ -243,5 +253,6 @@ const styles = StyleSheet.create({
   },
   text: { color: '#fff', fontSize: 13.5, fontFamily: F.bodySemi },
   message: { flexShrink: 1 },
+  eta: { fontFamily: F.bodySemi, opacity: 0.7 },
   cancel: { color: ACCENT_DARK, fontFamily: F.bodyHeavy },
 });

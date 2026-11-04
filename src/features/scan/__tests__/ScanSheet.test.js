@@ -37,3 +37,19 @@ test('text that is not a calculation asks for an edit', async () => {
   await scan('2×(');
   expect(screen.getByText('Can’t work this out — edit it')).toBeTruthy();
 });
+
+test('a scanned matrix, complex number or double integral', async () => {
+  const input = await scan('det([1,2;3,4])');
+  expect(screen.getByText('= -2')).toBeTruthy();
+  fireEvent.changeText(input, '(3+4i)×(1−2i)');
+  expect(screen.getByText('= 11−2i')).toBeTruthy();
+  fireEvent.changeText(input, '∬(x×y,0,1,0,x)'); // slow keys are worked out at =
+  expect(screen.getByText('Insert, then press = to work it out')).toBeTruthy();
+});
+
+test('the wait shows how long reading should take', async () => {
+  scanEquation.mockReturnValue(new Promise(() => {})); // still reading
+  render(<ScanSheet visible session={1} t={light} angle="deg" output="dec" onClose={() => {}} onInsert={() => {}} />);
+  fireEvent.press(screen.getByText('Choose image'));
+  expect(await screen.findByText(/Reading… ~\d+ s left/)).toBeTruthy();
+});

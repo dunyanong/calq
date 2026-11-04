@@ -7,6 +7,28 @@ import { BLUE } from '@/theme/tokens';
 import AngleBadge, { angleMode } from '@/components/AngleBadge';
 import Loader from '@/components/Loader';
 import { BOX, boxLabel } from '@/features/calculator/math/entry';
+import { matrixRows } from '@/features/calculator/math/format';
+
+/** "= result", a matrix drawn as aligned rows in brackets. */
+function Result({ result, color }) {
+  const rows = matrixRows(result);
+  if (!rows) return <Text style={[styles.res, { color }]}>= {result}</Text>;
+  const last = rows.length - 1;
+  // tall brackets built from top, middle and bottom pieces
+  const side = (i, [top, mid, bottom]) => (i === 0 ? top : i === last ? bottom : mid);
+  return (
+    <View style={styles.matrix} accessible accessibilityLabel={'equals matrix ' + rows.map((r) => r.trim()).join('; ')}>
+      <Text style={[styles.res, { color }]}>= </Text>
+      <View>
+        {rows.map((row, i) => (
+          <Text key={i} style={[styles.res, { color }]}>
+            {side(i, '⎡⎢⎣')} {row} {side(i, '⎤⎥⎦')}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 // Memoised: the entry changes on every key press, the cards do not.
 const HistoryCard = memo(function HistoryCard({ item, t, held, selecting, selected, onHold, onRecall, onToggle }) {
@@ -47,7 +69,7 @@ const HistoryCard = memo(function HistoryCard({ item, t, held, selecting, select
           </View>
           <Text style={[styles.expr, { color: t.displayInk }]}>{item.expr}</Text>
         </View>
-        <Text style={[styles.res, { color: t.displayInk }]}>= {item.result}</Text>
+        <Result result={item.result} color={t.displayInk} />
       </Pressable>
     </Animated.View>
   );
@@ -237,6 +259,7 @@ const styles = StyleSheet.create({
   head: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   expr: { fontFamily: F.mono, fontSize: 12.5, opacity: 0.55, textAlign: 'right', flexShrink: 1 },
   res: { fontFamily: F.monoBold, fontSize: 16 },
+  matrix: { flexDirection: 'row', alignItems: 'center' },
   entryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 24 },
   badges: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // same shape as AngleBadge

@@ -4,8 +4,9 @@ import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { CameraIcon } from '@/components/Icons';
 import Loader from '@/components/Loader';
 import Popup from '@/components/Popup';
-import { evaluate } from '@/features/calculator/math/engine';
-import { formatNumber } from '@/features/calculator/math/format';
+import { useAiEta } from '@/features/ai/aiEta';
+import { compute, isHeavy } from '@/features/calculator/math/engine';
+import { formatNumber, formatValue } from '@/features/calculator/math/format';
 import { normalizeExpr } from '@/features/calculator/math/normalize';
 import { indefiniteIntegrand, symbolicDerivative } from '@/features/calculator/math/symbolic';
 import { scanEquation } from '@/services/ai';
@@ -32,8 +33,9 @@ function Button({ label, onPress, primary, disabled, t, children }) {
   );
 }
 
-function Body({ t, angle, output, onInsert }) {
+function Body({ t, angle, output, numbers, onInsert }) {
   const [s, setS] = useState(EMPTY);
+  const left = useAiEta(s.status === 'reading' ? 'scan' : null);
 
   const scan = async (source) => {
     try {
@@ -50,15 +52,22 @@ function Body({ t, angle, output, onInsert }) {
   const expr = normalizeExpr(s.text);
   // d/dx without a point gives a formula, or a number when no x is left (d/dx(3x) = 3)
   const formula = expr ? symbolicDerivative(expr, angle) : null;
-  const value = formula ? (formula.value ?? null) : expr ? evaluate(expr, angle) : null;
+  // ∬, ode, min … can take a moment: worked out at = instead of on every edit
+  const slow = !formula && !!expr && isHeavy(expr) && !indefiniteIntegrand(expr, angle);
+  const res = formula || !expr || slow ? null : compute(expr, angle, numbers);
+  const value = formula?.value ?? null;
   const shown =
     value !== null
       ? '= ' + formatNumber(value, output)
       : formula?.text
         ? '= ' + formula.text
-        : expr && indefiniteIntegrand(expr, angle)?.f // ∫ without limits: the formula comes from the AI at =
-          ? 'Insert, then press = for the formula'
-          : 'Can’t work this out — edit it';
+        : res && !res.error
+          ? '= ' + formatValue(res, output)
+          : slow
+            ? 'Insert, then press = to work it out'
+            : expr && indefiniteIntegrand(expr, angle)?.f // ∫ without limits: the formula comes from the AI at =
+              ? 'Insert, then press = for the formula'
+              : 'Can’t work this out — edit it';
 
   return (
     <>
@@ -85,7 +94,9 @@ function Body({ t, angle, output, onInsert }) {
       {s.status === 'reading' && (
         <View style={styles.reading}>
           <Loader color={BLUE} label="Reading the image" />
-          <Text style={styles.hint}>Reading…</Text>
+          <Text style={styles.hint} accessibilityLabel={left ? 'Reading. ' + left.spoken : undefined}>
+            Reading…{left ? '  ' + left.text : ''}
+          </Text>
         </View>
       )}
 
@@ -126,12 +137,13 @@ function Body({ t, angle, output, onInsert }) {
 /**
  * @param {object} p
  * @param {number} p.session   changes on every open, so the sheet starts fresh
+ * @param {'real'|'complex'} [p.numbers]  Settings → Numbers, for the preview
  * @param {(expr: string) => void} p.onInsert
  */
-export default function ScanSheet({ visible, session, t, angle, output, onClose, onInsert }) {
+export default function ScanSheet({ visible, session, t, angle, output, numbers = 'real', onClose, onInsert }) {
   return (
     <Popup visible={visible} session={session} t={t} onClose={onClose} style={styles.panel} contentStyle={styles.content}>
-      <Body t={t} angle={angle} output={output} onInsert={onInsert} />
+      <Body t={t} angle={angle} output={output} numbers={numbers} onInsert={onInsert} />
     </Popup>
   );
 }

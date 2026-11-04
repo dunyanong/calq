@@ -21,27 +21,28 @@ import { useSettings } from '@/features/settings/SettingsContext';
 import { DEFAULT_SETTINGS } from '@/features/settings/settingsStore';
 import { useHistory } from '@/features/history/HistoryContext';
 import { useExport } from '@/features/export/ExportContext';
+import { useAiEta } from '@/features/ai/aiEta';
 import { integrateFormula } from '@/services/ai';
-import { closeParens, evaluate, freezeRandom, hasCalculus, hasTrig } from './math/engine';
+import { closeParens, compute, evaluate, freezeRandom, hasCalculus, hasTrig, isHeavy } from './math/engine';
 import { BOX, boxHint, closeBox, completeEntry, deleteBefore, freezeVars, insertAt, moveCursor as move, templateText } from './math/entry';
-import { formatNumber, operandIn } from './math/format';
+import { formatNumber, formatValue, operandIn } from './math/format';
 import { VARIABLES, isLetterMode, resolveKey } from './math/keys';
 import { findAntiderivative, indefiniteIntegrand, symbolicDerivative } from './math/symbolic';
 
-const MAX_ENTRY = 120; // Firestore rule allows 200; keep the display readable
-const MAX_SAVED = 200; // Firestore rule for history expressions and results (a formula can be long)
+const MAX_ENTRY = 300; // room for a 3×3 matrix and a constraint list; Firestore allows 2000
+const MAX_SAVED = 1000; // history expressions and results (a formula or an SVD can be long); Firestore allows 2000
 const MAX_CARDS = 100; // past calculations on the display; History has them all
 const HIDDEN_PAD = 54; // keypad height when collapsed to its handle
 const DISPLAY_SHARE = 0.47; // display height / body height (about 330px of 700)
 const KEYPAD_MIN = 360; // the 5-row numeric page needs this much (plus the safe area) on small phones
 // The live "= …" preview is shown once the entry has something to work out
 // (an operator, a function, or one of the variables A–D, F, M).
-const WORTH_PREVIEW = /[+−×÷^!²³⁻√∛(%EABCDFM]/;
+const WORTH_PREVIEW = /[+−×÷^!²³⁻√∛(%EABCDFM[ᵀi]/;
 // Actions that switch on a mode of their own (the key must not switch it off again).
 const MODE_ACTIONS = new Set(['hyp', 'rcl', 'sto']);
 
 export default function Calculator() {
-  const { theme: t, angle, output, ans, vars, sessionStart, update } = useSettings();
+  const { theme: t, angle, output, numbers, ans, vars, sessionStart, update } = useSettings();
   const history = useHistory();
   const { user } = useAuth();
   const aiOn = useAiOn();
@@ -53,7 +54,8 @@ export default function Calculator() {
 
   const [entry, setEntry] = useState({ text: '', at: 0 }); // at: cursor position in text
   const [shake, setShake] = useState(0); // bumped on a bad expression
-  const [busy, setBusy] = useState(false); // waiting for the AI's ∫ formula
+  const [busy, setBusy] = useState(null); // 'formula' (waiting for the AI's ∫ formula) | 'working' (a slow key) | null
+  const formulaEta = useAiEta(busy === 'formula' ? 'formula' : null);
   const [mode, setMode] = useState(null); // 'shift' | 'alpha' | 'sto' | 'rcl' | 'hyp' | null
   const [pinFilter, setPinFilter] = useState(false);
   // held calculation panel; session remounts the panel body on each open
@@ -97,11 +99,15 @@ export default function Calculator() {
     setMode(null);
   };
 
-  /** Ans, RCL and Rand: the value goes in at the cursor without merging with a digit next to it. */
+  /**
+   * Ans, RCL and Rand: the value goes in at the cursor without merging with a digit next to it.
+   * Ans can also be a matrix ("[1,2;3,4]", typed as is) or a complex number ("3+4i", bracketed).
+   */
   const insertValue = (v) => {
     setEntry((e) => {
       const end = e.text[e.at] === BOX ? e.at + 1 : e.at; // typing into a box replaces it
-      return insertAt(e, operandIn(e.text, e.at, end, v), MAX_ENTRY) || e;
+      const text = typeof v !== 'string' ? operandIn(e.text, e.at, end, v) : v.startsWith('[') ? v : '(' + v + ')';
+      return insertAt(e, text, MAX_ENTRY) || e;
     });
     setMode(null);
   };
@@ -129,16 +135,16 @@ export default function Calculator() {
     toast(message);
   };
 
-  // Value of the entry so far, shown dimmed under it. ∫, d/dx, Σ and Π are
+  // Value of the entry so far, shown dimmed under it. ∫, d/dx, min, ode … are
   // skipped: they can take a moment and the preview runs on every key press.
   const preview = useMemo(() => {
     const s = entry.text;
-    if (!WORTH_PREVIEW.test(s) || hasCalculus(s) || s.includes('RanInt')) return null;
-    const v = evaluate(freezeVars(s, vars), angle);
-    return v === null ? null : formatNumber(v, output);
-  }, [entry.text, vars, angle, output]);
+    if (!WORTH_PREVIEW.test(s) || isHeavy(s) || s.includes('RanInt')) return null;
+    const res = compute(freezeVars(s, vars), angle, numbers);
+    return res.error ? null : formatValue(res, output);
+  }, [entry.text, vars, angle, output, numbers]);
 
-  /** Saves a result and clears the entry. value: the number for Ans (a formula leaves Ans alone). */
+  /** Saves a result and clears the entry. value: the new Ans, a number or a complex / matrix text (a formula leaves Ans alone). */
   const addResult = (expr, result, value) => {
     if (result.length > MAX_SAVED) {
       fail('That formula is too long to show');
@@ -161,7 +167,7 @@ export default function Calculator() {
       fail(user ? 'Turn on AI help in Settings to get a formula' : 'Sign in to get a formula for ∫ without limits');
       return;
     }
-    setBusy(true);
+    setBusy('formula');
     try {
       const res = await findAntiderivative(f, angle, (opts) => integrateFormula(f, angle, opts));
       if (res.error) fail(res.error);
@@ -169,7 +175,7 @@ export default function Calculator() {
     } catch (e) {
       fail(e.message);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -203,12 +209,34 @@ export default function Calculator() {
       addResult(expr, formula.text);
       return;
     }
-    const v = formula ? formula.value : evaluate(expr, angle);
-    if (v === null) {
-      fail(expr.includes('x') && !hasCalculus(expr) ? 'Use x inside ∫, d/dx, Σ or Π' : 'Check the expression');
+    if (formula) {
+      addResult(expr, formatNumber(formula.value, output), formula.value);
       return;
     }
-    addResult(expr, formatNumber(v, output), v);
+    const work = () => {
+      const res = compute(expr, angle, numbers);
+      if (res.error) {
+        fail(res.error);
+        return;
+      }
+      const text = formatValue(res, output);
+      // Ans keeps numbers, complex numbers and matrices; several results (x=…, min=…) leave it alone
+      const value = res.kind === 'number' ? res.value : res.kind === 'complex' || res.kind === 'matrix' ? text : undefined;
+      addResult(expr, text, value);
+    };
+    if (!isHeavy(expr)) {
+      work();
+      return;
+    }
+    // a slow key (∬, ode, min …): let "Working…" paint before the JS thread is busy
+    setBusy('working');
+    setTimeout(() => {
+      try {
+        work();
+      } finally {
+        setBusy(null);
+      }
+    }, 30);
   };
 
   const copy = async (text) => {
@@ -218,7 +246,11 @@ export default function Calculator() {
 
   /** Value of the entry (Ans when it is empty) for M+, M− and STO; null after showing the error. */
   const entryValue = () => {
-    if (!entry.text.trim()) return ans;
+    if (!entry.text.trim()) {
+      if (typeof ans === 'number') return ans;
+      fail('Only a number can be stored');
+      return null;
+    }
     const v = evaluate(freezeRandom(freezeVars(entry.text, vars), angle), angle);
     if (v === null) fail('Check the expression');
     return v;
@@ -359,7 +391,13 @@ export default function Calculator() {
           entry={entry.text}
           cursor={entry.at}
           preview={preview}
-          hint={busy ? 'Finding a formula…' : varsHint || boxHint(entry)}
+          hint={
+            busy === 'formula'
+              ? 'Finding a formula…' + (formulaEta ? '  ' + formulaEta.text : '')
+              : busy === 'working'
+                ? 'Working it out…'
+                : varsHint || boxHint(entry)
+          }
           busy={busy}
           shake={shake}
           angle={angle}
@@ -397,6 +435,7 @@ export default function Calculator() {
         t={t}
         angle={angle}
         output={output}
+        numbers={numbers}
         onClose={closeScan}
         onInsert={(expr) => {
           const text = expr.slice(0, MAX_ENTRY); // a scan is a whole calculation: replace the entry

@@ -134,7 +134,7 @@ describe('share sheet', () => {
     act(() => {
       pending = api.run(items, 'pdf', { notes: true });
     });
-    expect(await screen.findByText('Writing study notes…')).toBeTruthy();
+    expect(await screen.findByText(/^Writing study notes… ~\d+ s left$/)).toBeTruthy(); // with its time estimate
     act(() => {
       api.run(items, 'csv');
     });
@@ -142,7 +142,7 @@ describe('share sheet', () => {
 
     fireEvent.press(screen.getByText('Cancel'));
     expect(screen.getByText('Export cancelled')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText('Writing study notes…')).toBeNull()); // after the pill fades
+    await waitFor(() => expect(screen.queryByText(/Writing study notes…/)).toBeNull()); // after the pill fades
     await act(async () => {
       finish(REPLY);
       await pending;
