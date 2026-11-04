@@ -129,6 +129,8 @@ const LABELS = {
 const OPTIONAL_FROM = { '∂x(': 1, '∂y(': 1, '∂z(': 1, 'min(': 2, 'max(': 2 };
 
 /** What a template key types: "∫(" -> "∫(□,□,□)". */
+/** True for an opener that types boxes, e.g. "∫(". */
+export const isTemplate = (opener) => Object.hasOwn(TEMPLATES, opener);
 export const templateText = (opener) => opener + TEMPLATES[opener].map(() => BOX).join(',') + ')';
 
 // [ ] of matrices and lists nest like ( ): their commas belong to them, not to a box.
